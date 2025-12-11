@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HL7 Document Viewer</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --border: #475569;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .panel-body {
+            padding: 1.25rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 400px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            color: var(--text-primary);
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        textarea::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .results-panel {
+            min-height: 500px;
+        }
+
+        .segment-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 1rem;
+        }
+
+        .segment-item {
+            padding: 0.5rem 0.75rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .segment-item:last-child {
+            border-bottom: none;
+        }
+
+        .segment-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .segment-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .segment-tag {
+            background: var(--bg-tertiary);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
+        .segment-item.active .segment-tag {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .documents-section {
+            margin-top: 1.5rem;
+        }
+
+        .documents-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .doc-count {
+            background: var(--accent);
+            color: white;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+
+        .document-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .document-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .document-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .document-preview {
+            position: relative;
+            background: #1a1a2e;
+            min-height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .document-preview img {
+            max-width: 100%;
+            max-height: 250px;
+            object-fit: contain;
+        }
+
+        .document-preview iframe {
+            width: 100%;
+            height: 300px;
+            border: none;
+        }
+
+        .pdf-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-secondary);
+            padding: 2rem;
+        }
+
+        .pdf-icon {
+            font-size: 3rem;
+        }
+
+        .document-info {
+            padding: 1rem;
+        }
+
+        .document-type {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 5px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .type-jpeg, .type-jpg {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .type-png {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+
+        .type-pdf {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fcd34d;
+        }
+
+        .document-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .document-meta span {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .document-actions button {
+            flex: 1;
+            padding: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .segment-detail {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+            word-break: break-all;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .field-highlight {
+            color: var(--accent);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            position: relative;
+        }
+
+        .modal-content img {
+            max-width: 100%;
+            max-height: 85vh;
+            border-radius: 8px;
+        }
+
+        .modal-content iframe {
+            width: 80vw;
+            height: 85vh;
+            border: none;
+            border-radius: 8px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: var(--bg-tertiary);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: var(--error);
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1001;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--error);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>HL7 Document Viewer</h1>
+            <p>Parse HL7 messages and extract embedded documents (JPEG, PNG, PDF)</p>
+        </header>
+
+        <div class="main-content">
+            <div class="panel input-panel">
+                <div class="panel-header">
+                    <span class="panel-title">HL7 Message Input</span>
+                </div>
+                <div class="panel-body">
+                    <textarea id="hl7Input" placeholder="Paste your HL7 message here...
+
+Example OBX segment with embedded document:
+OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textarea>
+                    <div class="button-group">
+                        <button class="btn-primary" onclick="parseHL7()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            Parse Message
+                        </button>
+                        <button class="btn-secondary" onclick="loadSample()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            Load Sample
+                        </button>
+                        <button class="btn-secondary" onclick="clearAll()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel results-panel">
+                <div class="panel-header">
+                    <span class="panel-title">Parsed Results</span>
+                </div>
+                <div class="panel-body">
+                    <div id="resultsContent">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📋</div>
+                            <h3>No Message Parsed</h3>
+                            <p>Paste an HL7 message and click "Parse Message" to view segments and extract embedded documents.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="documentsSection" class="documents-section" style="display: none;">
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">Extracted Documents</span>
+                    <span class="doc-count" id="docCount">0</span>
+                </div>
+                <div class="panel-body">
+                    <div class="document-grid" id="documentGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="imageModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Magic number patterns for base64 encoded files
+        const MAGIC_NUMBERS = {
+            jpeg: ['/9j/', 'FFD8FF'],
+            png: ['iVBORw0KGgo', '89504E47'],
+            pdf: ['JVBERi', '25504446']
+        };
+
+        // HL7 field separator defaults
+        const DEFAULT_FIELD_SEP = '|';
+        const DEFAULT_COMPONENT_SEP = '^';
+        const DEFAULT_SUBCOMPONENT_SEP = '&';
+        const DEFAULT_REPETITION_SEP = '~';
+        const DEFAULT_ESCAPE_CHAR = '\\';
+
+        let parsedSegments = [];
+        let extractedDocuments = [];
+
+        function parseHL7() {
+            const input = document.getElementById('hl7Input').value.trim();
+            if (!input) {
+                showToast('Please enter an HL7 message', 'error');
+                return;
+            }
+
+            // Parse the message
+            const lines = input.split(/\r\n|\r|\n/).filter(line => line.trim());
+            parsedSegments = [];
+            extractedDocuments = [];
+
+            // Get encoding characters from MSH segment if present
+            let fieldSep = DEFAULT_FIELD_SEP;
+            let componentSep = DEFAULT_COMPONENT_SEP;
+
+            const mshLine = lines.find(l => l.startsWith('MSH'));
+            if (mshLine && mshLine.length > 3) {
+                fieldSep = mshLine[3];
+                if (mshLine.length > 4) {
+                    componentSep = mshLine[4];
+                }
+            }
+
+            lines.forEach((line, index) => {
+                const segmentType = line.substring(0, 3);
+                let fields;
+
+                if (segmentType === 'MSH') {
+                    // MSH is special - field separator is at position 3
+                    fields = ['MSH', fieldSep, ...line.substring(4).split(fieldSep)];
+                } else {
+                    fields = line.split(fieldSep);
+                }
+
+                const segment = {
+                    index: index,
+                    type: segmentType,
+                    raw: line,
+                    fields: fields
+                };
+
+                parsedSegments.push(segment);
+
+                // Check OBX segments for embedded documents
+                if (segmentType === 'OBX') {
+                    const doc = extractDocument(segment, componentSep);
+                    if (doc) {
+                        extractedDocuments.push(doc);
+                    }
+                }
+            });
+
+            renderResults();
+            renderDocuments();
+        }
+
+        function extractDocument(segment, componentSep) {
+            const fields = segment.fields;
+
+            // OBX-2 is Value Type (should be 'ED' for Encapsulated Data)
+            const valueType = fields[2] || '';
+
+            // OBX-3 is Observation Identifier
+            const obsIdentifier = fields[3] || '';
+
+            // OBX-4 is Observation Sub-ID (may contain hints)
+            const subId = fields[4] || '';
+
+            // OBX-5 is Observation Value (contains the data)
+            const obsValue = fields[5] || '';
+
+            // Parse the observation value components
+            // Format: source^type^subtype^encoding^data
+            const components = obsValue.split(componentSep);
+
+            let dataType = null;
+            let encoding = null;
+            let base64Data = null;
+
+            if (valueType === 'ED' || valueType === 'RP') {
+                // Standard ED format
+                if (components.length >= 5) {
+                    const typeHint = (components[1] || '').toLowerCase();
+                    const subtypeHint = (components[2] || '').toLowerCase();
+                    encoding = (components[3] || '').toLowerCase();
+                    base64Data = components[4] || '';
+
+                    // Determine type from hints
+                    if (subtypeHint.includes('pdf') || typeHint.includes('pdf')) {
+                        dataType = 'pdf';
+                    } else if (subtypeHint.includes('jpeg') || subtypeHint.includes('jpg') ||
+                               typeHint.includes('jpeg') || typeHint.includes('jpg')) {
+                        dataType = 'jpeg';
+                    } else if (subtypeHint.includes('png') || typeHint.includes('png')) {
+                        dataType = 'png';
+                    }
+                }
+            }
+
+            // If we have data but no type, try to detect from base64 data
+            // Also check for raw base64 data in OBX-5
+            if (!base64Data && obsValue) {
+                // Maybe the data is directly in OBX-5 without ED structure
+                base64Data = obsValue.replace(/[\s^|]/g, '');
+            }
+
+            if (base64Data && !dataType) {
+                dataType = detectTypeFromMagic(base64Data);
+            }
+
+            // Also check OBX-3 and OBX-4 for type hints
+            if (!dataType) {
+                const hints = (obsIdentifier + ' ' + subId).toLowerCase();
+                if (hints.includes('pdf')) dataType = 'pdf';
+                else if (hints.includes('jpeg') || hints.includes('jpg')) dataType = 'jpeg';
+                else if (hints.includes('png')) dataType = 'png';
+            }
+
+            if (base64Data && dataType) {
+                // Clean the base64 data
+                base64Data = base64Data.replace(/[\s\r\n]/g, '');
+
+                // Validate it looks like base64
+                if (isValidBase64(base64Data)) {
+                    return {
+                        segmentIndex: segment.index,
+                        type: dataType,
+                        encoding: encoding || 'base64',
+                        data: base64Data,
+                        obsIdentifier: obsIdentifier,
+                        subId: subId,
+                        size: Math.round((base64Data.length * 3) / 4 / 1024) // Approximate KB
+                    };
+                }
+            }
+
+            return null;
+        }
+
+        function detectTypeFromMagic(base64Data) {
+            // Check first few characters of base64 for magic numbers
+            const prefix = base64Data.substring(0, 20);
+
+            for (const [type, patterns] of Object.entries(MAGIC_NUMBERS)) {
+                for (const pattern of patterns) {
+                    if (prefix.startsWith(pattern)) {
+                        return type;
+                    }
+                }
+            }
+
+            // Try decoding first few bytes
+            try {
+                const decoded = atob(base64Data.substring(0, 20));
+                const bytes = new Uint8Array(decoded.length);
+                for (let i = 0; i < decoded.length; i++) {
+                    bytes[i] = decoded.charCodeAt(i);
+                }
+
+                // Check magic bytes
+                if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+                    return 'jpeg';
+                }
+                if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+                    return 'png';
+                }
+                if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
+                    return 'pdf';
+                }
+            } catch (e) {
+                // Invalid base64
+            }
+
+            return null;
+        }
+
+        function isValidBase64(str) {
+            if (!str || str.length < 4) return false;
+            try {
+                // Check if it's valid base64 format
+                return /^[A-Za-z0-9+/]*={0,2}$/.test(str);
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function renderResults() {
+            const container = document.getElementById('resultsContent');
+
+            if (parsedSegments.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3>No Segments Found</h3>
+                        <p>The input doesn't appear to contain valid HL7 segments.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const obxCount = parsedSegments.filter(s => s.type === 'OBX').length;
+            const docCount = extractedDocuments.length;
+
+            container.innerHTML = `
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-value">${parsedSegments.length}</div>
+                        <div class="stat-label">Segments</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${obxCount}</div>
+                        <div class="stat-label">OBX Segments</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${docCount}</div>
+                        <div class="stat-label">Documents Found</div>
+                    </div>
+                </div>
+                <div class="segment-list" id="segmentList">
+                    ${parsedSegments.map((seg, i) => `
+                        <div class="segment-item ${seg.type === 'OBX' ? 'obx-segment' : ''}"
+                             onclick="showSegmentDetail(${i})"
+                             data-index="${i}">
+                            <span class="segment-tag">${seg.type}</span>
+                            <span>${truncate(seg.raw, 60)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="segment-detail" id="segmentDetail" style="display: none;"></div>
+            `;
+        }
+
+        function showSegmentDetail(index) {
+            const segment = parsedSegments[index];
+            const detailDiv = document.getElementById('segmentDetail');
+
+            // Update active state
+            document.querySelectorAll('.segment-item').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.segment-item[data-index="${index}"]`).classList.add('active');
+
+            // Format the segment with field highlighting
+            let formatted = segment.fields.map((field, i) => {
+                if (i === 0) return `<span class="field-highlight">${field}</span>`;
+                return `<span class="field-highlight">|</span>${escapeHtml(truncate(field, 100))}`;
+            }).join('');
+
+            detailDiv.innerHTML = formatted;
+            detailDiv.style.display = 'block';
+        }
+
+        function renderDocuments() {
+            const section = document.getElementById('documentsSection');
+            const grid = document.getElementById('documentGrid');
+            const countEl = document.getElementById('docCount');
+
+            if (extractedDocuments.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            countEl.textContent = extractedDocuments.length;
+
+            grid.innerHTML = extractedDocuments.map((doc, i) => {
+                const mimeType = getMimeType(doc.type);
+                const dataUrl = `data:${mimeType};base64,${doc.data}`;
+
+                let preview = '';
+                if (doc.type === 'pdf') {
+                    preview = `
+                        <div class="pdf-placeholder">
+                            <div class="pdf-icon">📄</div>
+                            <span>PDF Document</span>
+                            <button class="btn-secondary" onclick="viewDocument(${i})">View PDF</button>
+                        </div>
+                    `;
+                } else {
+                    preview = `<img src="${dataUrl}" alt="Document ${i + 1}" onclick="viewDocument(${i})" style="cursor: pointer;">`;
+                }
+
+                return `
+                    <div class="document-card">
+                        <div class="document-preview">
+                            ${preview}
+                        </div>
+                        <div class="document-info">
+                            <span class="document-type type-${doc.type}">${doc.type.toUpperCase()}</span>
+                            <div class="document-meta">
+                                <span>OBX Segment #${doc.segmentIndex + 1}</span>
+                                <span>Size: ~${doc.size} KB</span>
+                                ${doc.obsIdentifier ? `<span>ID: ${escapeHtml(truncate(doc.obsIdentifier, 30))}</span>` : ''}
+                            </div>
+                            <div class="document-actions">
+                                <button class="btn-secondary" onclick="downloadDocument(${i})">
+                                    Download
+                                </button>
+                                <button class="btn-primary" onclick="viewDocument(${i})">
+                                    View
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getMimeType(type) {
+            const types = {
+                jpeg: 'image/jpeg',
+                jpg: 'image/jpeg',
+                png: 'image/png',
+                pdf: 'application/pdf'
+            };
+            return types[type] || 'application/octet-stream';
+        }
+
+        function viewDocument(index) {
+            const doc = extractedDocuments[index];
+            const modal = document.getElementById('imageModal');
+            const modalBody = document.getElementById('modalBody');
+            const mimeType = getMimeType(doc.type);
+            const dataUrl = `data:${mimeType};base64,${doc.data}`;
+
+            if (doc.type === 'pdf') {
+                modalBody.innerHTML = `<iframe src="${dataUrl}"></iframe>`;
+            } else {
+                modalBody.innerHTML = `<img src="${dataUrl}" alt="Document">`;
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('imageModal').classList.remove('active');
+            document.getElementById('modalBody').innerHTML = '';
+        }
+
+        function downloadDocument(index) {
+            const doc = extractedDocuments[index];
+            const mimeType = getMimeType(doc.type);
+            const extension = doc.type === 'jpeg' ? 'jpg' : doc.type;
+
+            const link = document.createElement('a');
+            link.href = `data:${mimeType};base64,${doc.data}`;
+            link.download = `document_${index + 1}.${extension}`;
+            link.click();
+
+            showToast('Document downloaded', 'success');
+        }
+
+        function loadSample() {
+            // Sample HL7 message with embedded PNG (1x1 red pixel)
+            const samplePng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
+
+            // Sample HL7 message with embedded JPEG (1x1 red pixel)
+            const sampleJpeg = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBEQACEQA/ALUgAB//2Q==';
+
+            const sample = `MSH|^~\\&|SENDING_APP|SENDING_FACILITY|RECEIVING_APP|RECEIVING_FACILITY|20231215120000||ORU^R01|MSG00001|P|2.5
+PID|1||12345^^^Hospital^MR||Doe^John^A||19800101|M|||123 Main St^^City^ST^12345
+OBR|1|ORD001|ACC001|85025^CBC^LN|||20231215100000
+OBX|1|ED|PDF^Report||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovUmVzb3VyY2VzIDw8Ci9Gb250IDw8Ci9GMSA0IDAgUgo+Pgo+PgovQ29udGVudHMgNSAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iago1IDAgb2JqCjw8Ci9MZW5ndGggNDQKPj4Kc3RyZWFtCkJUCi9GMSAxOCBUZgoxMDAgNzAwIFRkCihITDcgUmVwb3J0KSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxNDcgMDAwMDAgbiAKMDAwMDAwMDI2NiAwMDAwMCBuIAowMDAwMDAwMzQzIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNgovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNDM3CiUlRU9G||||||F
+OBX|2|ED|PNG^Image^Scan||^image^png^Base64^${samplePng}||||||F
+OBX|3|ED|JPEG^Photo||^image^jpeg^Base64^${sampleJpeg}||||||F
+OBX|4|NM|WBC^White Blood Cell Count||7.5|10*3/uL|4.5-11.0|N|||F
+OBX|5|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
+
+            document.getElementById('hl7Input').value = sample;
+            showToast('Sample message loaded', 'success');
+        }
+
+        function clearAll() {
+            document.getElementById('hl7Input').value = '';
+            parsedSegments = [];
+            extractedDocuments = [];
+            document.getElementById('resultsContent').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <h3>No Message Parsed</h3>
+                    <p>Paste an HL7 message and click "Parse Message" to view segments and extract embedded documents.</p>
+                </div>
+            `;
+            document.getElementById('documentsSection').style.display = 'none';
+            showToast('Cleared', 'success');
+        }
+
+        function truncate(str, len) {
+            if (!str) return '';
+            return str.length > len ? str.substring(0, len) + '...' : str;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Close modal on backdrop click
+        document.getElementById('imageModal').addEventListener('click', (e) => {
+            if (e.target.id === 'imageModal') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
