@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.3] - 2025-01-XX
+
+### Changed
+- Improved PNG and JPEG sample images in loadSample() function
+- Sample images now display "PNG" and "JPEG" text in pixel font instead of 1x1 pixel images
+- Images are dynamically generated with proper styling matching the application theme
+
 ## [1.0.2] - 2025-01-XX
 
 ### Added
