@@ -765,13 +765,13 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                             </svg>
                             Clear
                         </button>
-                        <button class="btn-secondary" onclick="openInHL7Spy()" title="Download HL7 message for HL7 Spy">
+                        <button class="btn-secondary" onclick="openInHL7Spy()" title="Download HL7 message file (.hl7) to open in HL7 Spy">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                 <polyline points="7 10 12 15 17 10"></polyline>
                                 <line x1="12" y1="15" x2="12" y2="3"></line>
                             </svg>
-                            Open in HL7 Spy
+                            Download for HL7 Spy
                         </button>
                     </div>
                 </div>
@@ -1681,7 +1681,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             // Generate pleasant ping/beep sound as WAV
             const sampleWav = createPingSound();
 
-            const sample = `MSH|^~\\&|SENDING_APP|SENDING_FACILITY|RECEIVING_APP|RECEIVING_FACILITY|20231215120000||ORU^R01|MSG00001|P|2.5
+            const sample = `MSH|^~\\&|SENDING_APP|SENDING_FACILITY|RECEIVING_APP|RECEIVING_FACILITY|20231215120000||ORU^R01|MSG00001|P|2.4
 PID|1||12345^^^Hospital^MR||Doe^John^A||19800101|M|||123 Main St^^City^ST^12345
 OBR|1|ORD001|ACC001|85025^CBC^LN|||20231215100000
 OBX|1|ED|PDF^Report||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovUmVzb3VyY2VzIDw8Ci9Gb250IDw8Ci9GMSA0IDAgUgo+Pgo+PgovQ29udGVudHMgNSAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iago1IDAgb2JqCjw8Ci9MZW5ndGggNDQKPj4Kc3RyZWFtCkJUCi9GMSAxOCBUZgoxMDAgNzAwIFRkCihITDcgUmVwb3J0KSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxNDcgMDAwMDAgbiAKMDAwMDAwMDI2NiAwMDAwMCBuIAowMDAwMDAwMzQzIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNgovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNDM3CiUlRU9G||||||F
@@ -1717,6 +1717,32 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
                 return;
             }
 
+            // Try to use custom protocol handler first (if registered)
+            // This will only work if hl7spy:// protocol is registered on the system
+            try {
+                // Encode the message for URL (base64 encode to handle special characters)
+                const encodedMessage = btoa(unescape(encodeURIComponent(hl7Message)));
+                const protocolUrl = `hl7spy://data:application/hl7-v2;base64,${encodedMessage}`;
+                
+                // Try to open with protocol handler (will fail silently if not registered)
+                const protocolLink = document.createElement('a');
+                protocolLink.href = protocolUrl;
+                protocolLink.style.display = 'none';
+                document.body.appendChild(protocolLink);
+                protocolLink.click();
+                document.body.removeChild(protocolLink);
+                
+                // Give protocol handler a moment, then fall back to download
+                setTimeout(() => {
+                    downloadHL7File(hl7Message);
+                }, 500);
+            } catch (e) {
+                // If protocol handler fails, just download
+                downloadHL7File(hl7Message);
+            }
+        }
+
+        function downloadHL7File(hl7Message) {
             // Create a Blob with the HL7 message and proper MIME type
             const blob = new Blob([hl7Message], { type: 'application/hl7-v2' });
             const url = URL.createObjectURL(blob);
@@ -1732,7 +1758,7 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
             // Clean up the object URL
             setTimeout(() => URL.revokeObjectURL(url), 100);
             
-            showToast('HL7 message downloaded. Open with HL7 Spy.', 'success');
+            showToast('HL7 message downloaded. If .hl7 files are associated with HL7 Spy, it may open automatically.', 'success');
         }
 
         function truncate(str, len) {
