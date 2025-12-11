@@ -11,15 +11,17 @@ This tool parses HL7 messages and extracts embedded documents from OBX segments.
 
 ## Usage
 
-1. Open `index.html` in a web browser
+1. Open `index.html` in a web browser (or use the [live site](https://flatmapit.github.io/hl7-view/))
 2. Paste an HL7 message into the input field
 3. Click "Parse Message" to parse the message and extract documents
-4. View segments in the results panel
-5. View or download extracted documents from the documents section
+4. View segments in the results panel - click any segment to see detailed field information with HL7 field names
+5. Use copy icons to copy segments or individual fields to clipboard
+6. View or download extracted documents from the documents section
+7. Use "Open in HL7 Spy" button to download the message for analysis in HL7 Spy
 
 ## Features
 
-- Parse HL7 messages and display segments
+- Parse HL7 messages and display segments with field names
 - Extract embedded documents from OBX segments
 - Support for multiple file types:
   - **Images**: JPEG, PNG, GIF, TIFF, SVG
@@ -30,12 +32,22 @@ This tool parses HL7 messages and extracts embedded documents from OBX segments.
   - **Medical**: DICOM, HL7-SCP-ECG
 - View documents in a modal overlay (images, PDFs, HTML, XML, audio, video)
 - Download extracted documents
+- Copy segments and individual fields to clipboard
+- Download HL7 message for use with HL7 Spy
 - Load sample HL7 message for testing
+- **Privacy**: All processing happens locally in your browser - your data never leaves your device
 
 ## Technical Details
 
-The application is a single HTML file with embedded CSS and JavaScript. It runs entirely in the browser with no server required.
+The application is a single HTML file with embedded CSS and JavaScript. It runs entirely in the browser with no server required. **All data processing happens locally - your HL7 messages never leave your device.**
 
+### HL7 Parsing
+- Automatically detects HL7 version from MSH-12 field (defaults to 2.5)
+- Displays field names for common segments (MSH, PID, OBX, OBR, PV1, ORC, NTE, AL1, DG1, PR1)
+- Shows all fields in each segment with expandable long fields
+- Supports copy-to-clipboard for segments and individual fields
+
+### Document Extraction
 Document extraction works by:
 - Parsing OBX segments with Value Type "ED" (Encapsulated Data) or "RP" (Reference Pointer)
 - Extracting base64-encoded data from OBX-5 field

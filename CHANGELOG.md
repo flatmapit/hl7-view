@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- HL7 field name display in segment detail view
+- Automatic HL7 version detection from MSH-12 field (displays version in segment header)
+- Field name mappings for common HL7 segments (MSH, PID, OBX, OBR, PV1, ORC, NTE, AL1, DG1, PR1)
+- "Open in HL7 Spy" button to download HL7 message with proper MIME type (application/hl7-v2)
+- Privacy note in header indicating all processing happens locally in browser
+- Updated footer download link text for clarity
+
 ## [1.0.5] - 2025-12-12
 
 ### Changed
