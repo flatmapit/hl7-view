@@ -2,6 +2,8 @@
 
 A web application for parsing HL7 messages and extracting embedded documents.
 
+**🌐 [View Live Site](https://flatmapit.github.io/hl7-view/)**
+
 ## Overview
 
 This tool parses HL7 messages and extracts embedded documents (JPEG, PNG, PDF) from OBX segments. It displays parsed segments and allows viewing and downloading extracted documents.
@@ -55,7 +57,7 @@ This application is deployed to GitHub Pages. The site is automatically deployed
    - Source: GitHub Actions
    - The workflow will automatically deploy on push to `main`
 
-The site will be available at: `https://flatmapit.github.io/hl7-view/`
+The site is available at: [https://flatmapit.github.io/hl7-view/](https://flatmapit.github.io/hl7-view/)
 
 ## Browser Compatibility
 
