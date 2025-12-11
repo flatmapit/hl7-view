@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.8] - 2025-12-12
+
+### Fixed
+- Corrected HL7 field numbering display - fields now correctly show 1-indexed HL7 field numbers (OBX-1, OBX-2, OBX-5, etc.) matching the HL7 specification
+- Fixed field name lookup to properly map HL7 field numbers to field name arrays
+
 ## [1.0.7] - 2025-12-12
 
 ### Changed

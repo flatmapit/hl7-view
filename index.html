@@ -1228,10 +1228,16 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             `;
         }
 
-        function getFieldName(segmentType, fieldIndex) {
+        function getFieldName(segmentType, hl7FieldNumber) {
             const fieldNames = HL7_FIELD_NAMES[segmentType];
-            if (fieldNames && fieldNames[fieldIndex]) {
-                return fieldNames[fieldIndex];
+            // HL7 field numbers match array indices (fields[1] = field-1, fields[5] = field-5)
+            // But field name arrays are 0-indexed, so field-1 is at index 0, field-5 is at index 4
+            // For MSH: fields[0]='MSH', fields[1]=MSH-1, fields[2]=MSH-2, etc.
+            // For other segments: fields[0]=segment type, fields[1]=field-1, fields[2]=field-2, etc.
+            // So hl7FieldNumber 1 maps to array index 0, hl7FieldNumber 5 maps to array index 4
+            const arrayIndex = hl7FieldNumber - 1;
+            if (fieldNames && arrayIndex >= 0 && fieldNames[arrayIndex]) {
+                return fieldNames[arrayIndex];
             }
             return null;
         }
@@ -1268,12 +1274,25 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 const fullField = escapeHtml(fieldValue);
                 const truncatedText = escapeHtml(fieldValue.substring(0, fieldLength) + '...');
                 const fieldClass = isLong ? 'field-content long' : 'field-content';
-                const fieldName = getFieldName(segment.type, i);
+                
+                // Calculate HL7 field number (1-indexed)
+                // For MSH: fields[0]='MSH', fields[1]=MSH-1, fields[2]=MSH-2, etc.
+                // For other segments: fields[0]=segment type, fields[1]=field-1, fields[2]=field-2, etc.
+                let hl7FieldNumber;
+                if (segment.type === 'MSH') {
+                    // MSH: index 0 is segment type (not a field), index 1 is MSH-1
+                    hl7FieldNumber = i;
+                } else {
+                    // Other segments: index 0 is segment type (not a field), index 1 is field-1
+                    hl7FieldNumber = i;
+                }
+                
+                const fieldName = getFieldName(segment.type, hl7FieldNumber);
                 const fieldNameHtml = fieldName ? `<span class="field-name">${escapeHtml(fieldName)}</span>` : '';
                 
                 return `
                     <div class="field-item">
-                        <span class="field-index">${i}:</span>
+                        <span class="field-index">${hl7FieldNumber}:</span>
                         ${fieldNameHtml}
                         <span class="${fieldClass}" ${isLong ? `data-full="${fullField}" data-truncated="${truncatedText}" onclick="toggleFieldExpand(this)" style="cursor: pointer;" title="Click to expand/collapse"` : ''}>${isLong ? truncatedText : fullField}</span>
                         <span class="field-copy">
@@ -1313,8 +1332,10 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             const segment = parsedSegments[segmentIndex];
             if (segment && segment.fields && segment.fields[fieldIndex] !== undefined) {
                 const fieldValue = segment.fields[fieldIndex];
+                // Calculate HL7 field number for display
+                const hl7FieldNumber = segment.type === 'MSH' ? fieldIndex : fieldIndex;
                 navigator.clipboard.writeText(fieldValue).then(() => {
-                    showToast(`Field ${fieldIndex} copied to clipboard`, 'success');
+                    showToast(`Field ${hl7FieldNumber} copied to clipboard`, 'success');
                 }).catch(err => {
                     showToast('Failed to copy field', 'error');
                 });
