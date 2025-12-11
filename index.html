@@ -36,7 +36,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1800px;
             margin: 0 auto;
             padding: 2rem;
         }
@@ -474,12 +474,97 @@
             font-family: monospace;
             font-size: 0.8rem;
             word-break: break-all;
-            max-height: 150px;
+            max-height: 400px;
             overflow-y: auto;
         }
 
         .field-highlight {
             color: var(--accent);
+        }
+
+        .segment-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .segment-type-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .copy-icon {
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .copy-icon:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .copy-icon svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .field-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+        }
+
+        .field-item:last-child {
+            border-bottom: none;
+        }
+
+        .field-index {
+            color: var(--text-secondary);
+            font-weight: 600;
+            min-width: 40px;
+            font-size: 0.75rem;
+        }
+
+        .field-content {
+            flex: 1;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .field-content.long {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .field-content.expanded {
+            white-space: normal;
+            word-break: break-all;
+            overflow: visible;
+            text-overflow: clip;
+        }
+
+        .field-copy {
+            flex-shrink: 0;
         }
 
         .modal {
@@ -1080,7 +1165,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                              onclick="showSegmentDetail(${i})"
                              data-index="${i}">
                             <span class="segment-tag">${seg.type}</span>
-                            <span>${truncate(seg.raw, 60)}</span>
+                            <span>${truncate(seg.raw, 80)}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -1096,14 +1181,87 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             document.querySelectorAll('.segment-item').forEach(el => el.classList.remove('active'));
             document.querySelector(`.segment-item[data-index="${index}"]`).classList.add('active');
 
-            // Format the segment with field highlighting
-            let formatted = segment.fields.map((field, i) => {
-                if (i === 0) return `<span class="field-highlight">${field}</span>`;
-                return `<span class="field-highlight">|</span>${escapeHtml(truncate(field, 100))}`;
+            // Create segment header with copy icon
+            const segmentHeader = `
+                <div class="segment-header">
+                    <div class="segment-type-header">
+                        <span class="field-highlight">${escapeHtml(segment.type)}</span>
+                        <span class="copy-icon" onclick="copySegmentToClipboard(${index}, event)" title="Copy segment to clipboard">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+            `;
+
+            // Format all fields with copy icons
+            const fieldLength = 150; // Characters before ellipsis
+            const fieldsHtml = segment.fields.map((field, i) => {
+                const fieldValue = field || '';
+                const isLong = fieldValue.length > fieldLength;
+                const fullField = escapeHtml(fieldValue);
+                const truncatedText = escapeHtml(fieldValue.substring(0, fieldLength) + '...');
+                const fieldClass = isLong ? 'field-content long' : 'field-content';
+                
+                return `
+                    <div class="field-item">
+                        <span class="field-index">${i}:</span>
+                        <span class="${fieldClass}" ${isLong ? `data-full="${fullField}" data-truncated="${truncatedText}" onclick="toggleFieldExpand(this)" style="cursor: pointer;" title="Click to expand/collapse"` : ''}>${isLong ? truncatedText : fullField}</span>
+                        <span class="field-copy">
+                            <span class="copy-icon" onclick="copyFieldToClipboard(${index}, ${i}, event)" title="Copy field to clipboard">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </span>
+                        </span>
+                    </div>
+                `;
             }).join('');
 
-            detailDiv.innerHTML = formatted;
+            detailDiv.innerHTML = segmentHeader + fieldsHtml;
             detailDiv.style.display = 'block';
+        }
+
+        function copySegmentToClipboard(segmentIndex, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const segment = parsedSegments[segmentIndex];
+            if (segment && segment.raw) {
+                navigator.clipboard.writeText(segment.raw).then(() => {
+                    showToast('Segment copied to clipboard', 'success');
+                }).catch(err => {
+                    showToast('Failed to copy segment', 'error');
+                });
+            }
+        }
+
+        function copyFieldToClipboard(segmentIndex, fieldIndex, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const segment = parsedSegments[segmentIndex];
+            if (segment && segment.fields && segment.fields[fieldIndex] !== undefined) {
+                const fieldValue = segment.fields[fieldIndex];
+                navigator.clipboard.writeText(fieldValue).then(() => {
+                    showToast(`Field ${fieldIndex} copied to clipboard`, 'success');
+                }).catch(err => {
+                    showToast('Failed to copy field', 'error');
+                });
+            }
+        }
+
+        function toggleFieldExpand(element) {
+            if (element.classList.contains('expanded')) {
+                element.classList.remove('expanded');
+                element.textContent = element.dataset.truncated;
+            } else {
+                element.classList.add('expanded');
+                element.textContent = element.dataset.full;
+            }
         }
 
         function renderDocuments() {
