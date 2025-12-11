@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.5] - 2025-12-12
+
+### Changed
+- Increased container max-width from 1400px to 1800px for wider, more space-efficient UI
+- Modified parsed results panel to show all fields in each segment (no truncation)
+- Long fields (>150 characters) now display with ellipsis and can be expanded/collapsed by clicking
+- Increased segment detail panel max-height from 150px to 400px for better visibility
+
+### Added
+- Copy segment icon next to segment type (MSH/ORM, etc.) to copy entire raw segment to clipboard
+- Copy icon on each field to copy raw field content to clipboard
+- Toast notifications for copy operations
+- Improved segment detail layout with field index numbers and better organization
+- Click-to-expand functionality for long fields
+
 ## [1.0.4] - 2025-01-XX
 
 ### Changed
