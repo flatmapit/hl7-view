@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.4] - 2025-01-XX
+
+### Changed
+- Improved audio sample in loadSample() function
+- Sample audio now plays a pleasant ping/beep sound (800Hz tone with envelope) instead of silent audio
+- Added createPingSound() function to dynamically generate WAV audio files
+- Changed sample audio format from MP3 to WAV for better programmatic generation
+
 ## [1.0.3] - 2025-01-XX
 
 ### Changed

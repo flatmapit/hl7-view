@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="version" content="1.0.3">
+    <meta name="version" content="1.0.4">
     <title>HL7 Document Viewer</title>
     <!-- GitHub Pages deployment -->
     <style>
@@ -626,7 +626,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>HL7 Document Viewer <span style="font-size: 0.6em; font-weight: normal; color: var(--text-secondary);">v<span id="headerVersion">1.0.3</span></span></h1>
+            <h1>HL7 Document Viewer <span style="font-size: 0.6em; font-weight: normal; color: var(--text-secondary);">v<span id="headerVersion">1.0.4</span></span></h1>
             <p>Parse HL7 messages and extract embedded documents (Images, PDFs, Audio, Video, Documents, and more)</p>
         </header>
 
@@ -701,7 +701,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             <div class="footer-content">
                 <a href="https://github.com/flatmapit/hl7-view" target="_blank" rel="noopener noreferrer">View on GitHub</a>
                 <a href="https://github.com/flatmapit/hl7-view/releases" target="_blank" rel="noopener noreferrer">Download to run this locally</a>
-                <span>Version <span id="version">1.0.3</span></span>
+                <span>Version <span id="version">1.0.4</span></span>
                 <span>&copy; 2025 Chris Gentle <a href="https://flatmapit.com" target="_blank" rel="noopener noreferrer">flatmapit.com</a></span>
                 <a href="https://github.com/flatmapit/hl7-view/blob/main/LICENSE?plain=1" target="_blank" rel="noopener noreferrer">MIT License</a>
             </div>
@@ -719,7 +719,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
 
     <script>
         // Application version
-        const APP_VERSION = '1.0.3';
+        const APP_VERSION = '1.0.4';
 
         // Magic number patterns for base64 encoded files
         const MAGIC_NUMBERS = {
@@ -1378,13 +1378,83 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             return null;
         }
 
+        function createPingSound() {
+            // Generate a pleasant ping/beep sound as WAV file
+            // Frequency: 800Hz (pleasant mid-tone)
+            // Duration: 0.3 seconds
+            const sampleRate = 44100;
+            const frequency = 800;
+            const duration = 0.3;
+            const numSamples = Math.floor(sampleRate * duration);
+            const samples = new Float32Array(numSamples);
+            
+            // Generate sine wave with envelope (quick attack, exponential decay)
+            for (let i = 0; i < numSamples; i++) {
+                const t = i / sampleRate;
+                // Create envelope: quick attack (0.01s), then exponential decay
+                let envelope;
+                if (t < 0.01) {
+                    envelope = t / 0.01; // Linear attack
+                } else {
+                    envelope = Math.exp(-(t - 0.01) * 8); // Exponential decay
+                }
+                // Generate sine wave
+                samples[i] = Math.sin(2 * Math.PI * frequency * t) * envelope * 0.5;
+            }
+            
+            // Convert to 16-bit PCM
+            const pcm = new Int16Array(numSamples);
+            for (let i = 0; i < numSamples; i++) {
+                const s = Math.max(-1, Math.min(1, samples[i]));
+                pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            
+            // Create WAV file header
+            const dataLength = numSamples * 2; // 2 bytes per sample (16-bit)
+            const buffer = new ArrayBuffer(44 + dataLength);
+            const view = new DataView(buffer);
+            
+            // RIFF header
+            const writeString = (offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+            
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + dataLength, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true); // fmt chunk size
+            view.setUint16(20, 1, true); // audio format (PCM)
+            view.setUint16(22, 1, true); // num channels (mono)
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true); // byte rate
+            view.setUint16(32, 2, true); // block align
+            view.setUint16(34, 16, true); // bits per sample
+            writeString(36, 'data');
+            view.setUint32(40, dataLength, true);
+            
+            // Write PCM data
+            const pcmView = new Int16Array(buffer, 44);
+            pcmView.set(pcm);
+            
+            // Convert to base64
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
         function loadSample() {
             // Generate PNG and JPEG images with text in pixel font
             const samplePng = createImageWithText('PNG', 'png');
             const sampleJpeg = createImageWithText('JPEG', 'jpeg');
 
-            // Sample MP3 - minimal valid MP3 (3ms silent audio)
-            const sampleMp3 = 'SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
+            // Generate pleasant ping/beep sound as WAV
+            const sampleWav = createPingSound();
 
             const sample = `MSH|^~\\&|SENDING_APP|SENDING_FACILITY|RECEIVING_APP|RECEIVING_FACILITY|20231215120000||ORU^R01|MSG00001|P|2.5
 PID|1||12345^^^Hospital^MR||Doe^John^A||19800101|M|||123 Main St^^City^ST^12345
@@ -1392,7 +1462,7 @@ OBR|1|ORD001|ACC001|85025^CBC^LN|||20231215100000
 OBX|1|ED|PDF^Report||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovUmVzb3VyY2VzIDw8Ci9Gb250IDw8Ci9GMSA0IDAgUgo+Pgo+PgovQ29udGVudHMgNSAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iago1IDAgb2JqCjw8Ci9MZW5ndGggNDQKPj4Kc3RyZWFtCkJUCi9GMSAxOCBUZgoxMDAgNzAwIFRkCihITDcgUmVwb3J0KSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxNDcgMDAwMDAgbiAKMDAwMDAwMDI2NiAwMDAwMCBuIAowMDAwMDAwMzQzIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNgovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNDM3CiUlRU9G||||||F
 OBX|2|ED|PNG^Image^Scan||^image^png^Base64^${samplePng}||||||F
 OBX|3|ED|JPEG^Photo||^image^jpeg^Base64^${sampleJpeg}||||||F
-OBX|4|ED|MP3^Audio^Recording||^audio^mpeg^Base64^${sampleMp3}||||||F
+OBX|4|ED|WAV^Audio^Recording||^audio^wav^Base64^${sampleWav}||||||F
 OBX|5|NM|WBC^White Blood Cell Count||7.5|10*3/uL|4.5-11.0|N|||F
 OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
 
