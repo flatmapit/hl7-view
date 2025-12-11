@@ -2,7 +2,7 @@
 
 A web application for parsing HL7 messages and extracting embedded documents.
 
-**Version:** 1.0.8  
+**Version:** 1.0.9  
 **🌐 [View Live Site](https://flatmapit.github.io/hl7-view/)**
 
 ## Overview
@@ -15,9 +15,9 @@ This tool parses HL7 messages and extracts embedded documents from OBX segments.
 2. Paste an HL7 message into the input field
 3. Click "Parse Message" to parse the message and extract documents
 4. View segments in the results panel - click any segment to see detailed field information with HL7 field names
-5. Use copy icons to copy segments or individual fields to clipboard
-6. View or download extracted documents from the documents section
-7. Use "Open in HL7 Spy" button to download the message for analysis in HL7 Spy
+5. Use the "Pop Out" button in the results panel header to open a full-screen overlay showing all segments and fields at once for easier exploration
+6. Use copy icons to copy segments or individual fields to clipboard
+7. View or download extracted documents from the documents section
 
 ## Features
 
@@ -31,9 +31,9 @@ This tool parses HL7 messages and extracts embedded documents from OBX segments.
   - **Archives**: ZIP
   - **Medical**: DICOM, HL7-SCP-ECG
 - View documents in a modal overlay (images, PDFs, HTML, XML, audio, video)
+- Full-screen overlay view for parsed results showing all segments and fields at once
 - Download extracted documents
 - Copy segments and individual fields to clipboard
-- Download HL7 message for use with HL7 Spy
 - Load sample HL7 message for testing
 - **Privacy**: All processing happens locally in your browser - your data never leaves your device
 

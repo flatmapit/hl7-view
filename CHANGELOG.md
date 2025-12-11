@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.9] - 2025-12-XX
+
+### Added
+- Full-screen overlay view for parsed results - "Pop Out" button in results panel header opens all segments and fields in an expanded overlay
+- Enhanced exploration of HL7 messages with all segments visible at once in the overlay view
+
+### Removed
+- Removed "Download for HL7 Spy" button and associated functionality
+
 ## [1.0.8] - 2025-12-12
 
 ### Fixed

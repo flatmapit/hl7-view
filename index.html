@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="version" content="1.0.8">
+    <meta name="version" content="1.0.9">
     <title>HL7 Document Viewer</title>
     <!-- GitHub Pages deployment -->
     <style>
@@ -639,6 +639,87 @@
             background: var(--error);
         }
 
+        .results-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .results-overlay.active {
+            display: block;
+        }
+
+        .results-overlay-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            max-height: calc(100vh - 4rem);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .overlay-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem 2rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .overlay-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .overlay-stats-bar {
+            display: flex;
+            gap: 2rem;
+            padding: 1.5rem 2rem;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .overlay-segments-container {
+            padding: 2rem;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .overlay-segment-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .overlay-segment-header {
+            padding: 1rem 1.25rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .overlay-segment-fields {
+            padding: 1rem 1.25rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
         /* Scrollbar styling */
         ::-webkit-scrollbar {
             width: 8px;
@@ -725,7 +806,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>HL7 Document Viewer <span style="font-size: 0.6em; font-weight: normal; color: var(--text-secondary);">v<span id="headerVersion">1.0.8</span></span></h1>
+            <h1>HL7 Document Viewer <span style="font-size: 0.6em; font-weight: normal; color: var(--text-secondary);">v<span id="headerVersion">1.0.9</span></span></h1>
             <p>Parse HL7 messages and extract embedded documents (Images, PDFs, Audio, Video, Documents, and more)</p>
             <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">All processing happens locally in your browser - your data never leaves your device</p>
         </header>
@@ -765,14 +846,6 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                             </svg>
                             Clear
                         </button>
-                        <button class="btn-secondary" onclick="openInHL7Spy()" title="Download HL7 message file (.hl7) to open in HL7 Spy">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            Download for HL7 Spy
-                        </button>
                     </div>
                 </div>
             </div>
@@ -780,6 +853,12 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             <div class="panel results-panel">
                 <div class="panel-header">
                     <span class="panel-title">Parsed Results</span>
+                    <button class="btn-secondary" onclick="openResultsOverlay()" id="popOutBtn" style="display: none;" title="Open in full-screen overlay">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                        </svg>
+                        Pop Out
+                    </button>
                 </div>
                 <div class="panel-body">
                     <div id="resultsContent">
@@ -809,7 +888,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             <div class="footer-content">
                 <a href="https://github.com/flatmapit/hl7-view" target="_blank" rel="noopener noreferrer">View on GitHub</a>
                 <a href="https://github.com/flatmapit/hl7-view/releases" target="_blank" rel="noopener noreferrer">Download to use this HTML page locally or offline</a>
-                <span>Version <span id="version">1.0.8</span></span>
+                <span>Version <span id="version">1.0.9</span></span>
                 <span>&copy; 2025 Chris Gentle <a href="https://flatmapit.com" target="_blank" rel="noopener noreferrer">flatmapit.com</a></span>
                 <a href="https://github.com/flatmapit/hl7-view/blob/main/LICENSE?plain=1" target="_blank" rel="noopener noreferrer">MIT License</a>
             </div>
@@ -823,11 +902,15 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
         </div>
     </div>
 
+    <div class="results-overlay" id="resultsOverlay">
+        <div class="results-overlay-content" id="resultsOverlayContent"></div>
+    </div>
+
     <div class="toast" id="toast"></div>
 
     <script>
         // Application version
-        const APP_VERSION = '1.0.8';
+        const APP_VERSION = '1.0.9';
 
         // Magic number patterns for base64 encoded files
         const MAGIC_NUMBERS = {
@@ -1226,6 +1309,12 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 </div>
                 <div class="segment-detail" id="segmentDetail" style="display: none;"></div>
             `;
+            
+            // Show pop-out button when results are available
+            const popOutBtn = document.getElementById('popOutBtn');
+            if (popOutBtn) {
+                popOutBtn.style.display = 'inline-flex';
+            }
         }
 
         function getFieldName(segmentType, hl7FieldNumber) {
@@ -1728,58 +1817,113 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
                 </div>
             `;
             document.getElementById('documentsSection').style.display = 'none';
+            const popOutBtn = document.getElementById('popOutBtn');
+            if (popOutBtn) {
+                popOutBtn.style.display = 'none';
+            }
             showToast('Cleared', 'success');
         }
 
-        function openInHL7Spy() {
-            const hl7Message = document.getElementById('hl7Input').value.trim();
-            if (!hl7Message) {
-                showToast('Please enter an HL7 message first', 'error');
+        function openResultsOverlay() {
+            if (parsedSegments.length === 0) {
+                showToast('No parsed results to display', 'error');
                 return;
             }
 
-            // Try to use custom protocol handler first (if registered)
-            // This will only work if hl7spy:// protocol is registered on the system
-            try {
-                // Encode the message for URL (base64 encode to handle special characters)
-                const encodedMessage = btoa(unescape(encodeURIComponent(hl7Message)));
-                const protocolUrl = `hl7spy://data:application/hl7-v2;base64,${encodedMessage}`;
-                
-                // Try to open with protocol handler (will fail silently if not registered)
-                const protocolLink = document.createElement('a');
-                protocolLink.href = protocolUrl;
-                protocolLink.style.display = 'none';
-                document.body.appendChild(protocolLink);
-                protocolLink.click();
-                document.body.removeChild(protocolLink);
-                
-                // Give protocol handler a moment, then fall back to download
-                setTimeout(() => {
-                    downloadHL7File(hl7Message);
-                }, 500);
-            } catch (e) {
-                // If protocol handler fails, just download
-                downloadHL7File(hl7Message);
-            }
+            const modal = document.getElementById('resultsOverlay');
+            const modalContent = document.getElementById('resultsOverlayContent');
+            
+            // Render expanded results view
+            const obxCount = parsedSegments.filter(s => s.type === 'OBX').length;
+            const docCount = extractedDocuments.length;
+
+            let html = `
+                <div class="overlay-header">
+                    <h2>Parsed Results - Full View</h2>
+                    <button class="modal-close" onclick="closeResultsOverlay()">&times;</button>
+                </div>
+                <div class="overlay-stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-value">${parsedSegments.length}</div>
+                        <div class="stat-label">Segments</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${obxCount}</div>
+                        <div class="stat-label">OBX Segments</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${docCount}</div>
+                        <div class="stat-label">Documents Found</div>
+                    </div>
+                </div>
+                <div class="overlay-segments-container">
+            `;
+
+            // Render all segments with their fields expanded
+            parsedSegments.forEach((segment, index) => {
+                const fieldLength = 200; // Longer field display in overlay
+                const fieldsHtml = segment.fields.map((field, i) => {
+                    const fieldValue = field || '';
+                    const isLong = fieldValue.length > fieldLength;
+                    const fullField = escapeHtml(fieldValue);
+                    const truncatedText = escapeHtml(fieldValue.substring(0, fieldLength) + '...');
+                    const fieldClass = isLong ? 'field-content long' : 'field-content';
+                    
+                    let hl7FieldNumber;
+                    if (segment.type === 'MSH') {
+                        hl7FieldNumber = i;
+                    } else {
+                        hl7FieldNumber = i;
+                    }
+                    
+                    const fieldName = getFieldName(segment.type, hl7FieldNumber);
+                    const fieldNameHtml = fieldName ? `<span class="field-name">${escapeHtml(fieldName)}</span>` : '';
+                    
+                    return `
+                        <div class="field-item">
+                            <span class="field-index">${hl7FieldNumber}:</span>
+                            ${fieldNameHtml}
+                            <span class="${fieldClass}" ${isLong ? `data-full="${fullField}" data-truncated="${truncatedText}" onclick="toggleFieldExpand(this)" style="cursor: pointer;" title="Click to expand/collapse"` : ''}>${isLong ? truncatedText : fullField}</span>
+                            <span class="field-copy">
+                                <span class="copy-icon" onclick="copyFieldToClipboard(${index}, ${i}, event)" title="Copy field to clipboard">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </span>
+                            </span>
+                        </div>
+                    `;
+                }).join('');
+
+                html += `
+                    <div class="overlay-segment-card">
+                        <div class="overlay-segment-header">
+                            <div class="segment-type-header">
+                                <span class="segment-tag">${segment.type}</span>
+                                <span style="color: var(--text-secondary); font-size: 0.75rem; margin-left: 0.5rem;">HL7 v${hl7Version}</span>
+                                <span class="copy-icon" onclick="copySegmentToClipboard(${index}, event)" title="Copy segment to clipboard">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="overlay-segment-fields">
+                            ${fieldsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            modalContent.innerHTML = html;
+            modal.classList.add('active');
         }
 
-        function downloadHL7File(hl7Message) {
-            // Create a Blob with the HL7 message and proper MIME type
-            const blob = new Blob([hl7Message], { type: 'application/hl7-v2' });
-            const url = URL.createObjectURL(blob);
-            
-            // Create a download link
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'hl7-message.hl7';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            // Clean up the object URL
-            setTimeout(() => URL.revokeObjectURL(url), 100);
-            
-            showToast('HL7 message downloaded. If .hl7 files are associated with HL7 Spy, it may open automatically.', 'success');
+        function closeResultsOverlay() {
+            document.getElementById('resultsOverlay').classList.remove('active');
         }
 
         function truncate(str, len) {
@@ -1807,6 +1951,7 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeModal();
+                closeResultsOverlay();
             }
         });
 
@@ -1814,6 +1959,13 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
         document.getElementById('imageModal').addEventListener('click', (e) => {
             if (e.target.id === 'imageModal') {
                 closeModal();
+            }
+        });
+
+        // Close results overlay on backdrop click
+        document.getElementById('resultsOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'resultsOverlay') {
+                closeResultsOverlay();
             }
         });
 
