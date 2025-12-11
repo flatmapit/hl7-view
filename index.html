@@ -551,7 +551,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>HL7 Document Viewer</h1>
+            <h1>HL7 Document Viewer <span style="font-size: 0.6em; font-weight: normal; color: var(--text-secondary);">v<span id="headerVersion">1.0.0</span></span></h1>
             <p>Parse HL7 messages and extract embedded documents (JPEG, PNG, PDF)</p>
         </header>
 
@@ -1084,11 +1084,15 @@ OBX|5|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
             }
         });
 
-        // Set version in footer
+        // Set version in header and footer
         document.addEventListener('DOMContentLoaded', () => {
             const versionEl = document.getElementById('version');
             if (versionEl) {
                 versionEl.textContent = APP_VERSION;
+            }
+            const headerVersionEl = document.getElementById('headerVersion');
+            if (headerVersionEl) {
+                headerVersionEl.textContent = APP_VERSION;
             }
         });
     </script>
