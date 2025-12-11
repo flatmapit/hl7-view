@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="version" content="1.0.1">
+    <meta name="version" content="1.0.2">
     <title>HL7 Document Viewer</title>
     <!-- GitHub Pages deployment -->
     <style>
@@ -281,6 +281,11 @@
             border: none;
         }
 
+        .document-preview audio,
+        .document-preview video {
+            max-width: 100%;
+        }
+
         .pdf-placeholder {
             display: flex;
             flex-direction: column;
@@ -323,6 +328,76 @@
         .type-pdf {
             background: rgba(245, 158, 11, 0.2);
             color: #fcd34d;
+        }
+
+        .type-gif {
+            background: rgba(139, 92, 246, 0.2);
+            color: #c4b5fd;
+        }
+
+        .type-tiff, .type-tif {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+
+        .type-rtf {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+
+        .type-html, .type-htm {
+            background: rgba(236, 72, 153, 0.2);
+            color: #f9a8d4;
+        }
+
+        .type-zip {
+            background: rgba(168, 85, 247, 0.2);
+            color: #d8b4fe;
+        }
+
+        .type-xml {
+            background: rgba(14, 165, 233, 0.2);
+            color: #7dd3fc;
+        }
+
+        .type-svg {
+            background: rgba(251, 146, 60, 0.2);
+            color: #fed7aa;
+        }
+
+        .type-dicom, .type-dcm {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .type-doc {
+            background: rgba(37, 99, 235, 0.2);
+            color: #93c5fd;
+        }
+
+        .type-docx {
+            background: rgba(37, 99, 235, 0.2);
+            color: #93c5fd;
+        }
+
+        .type-mp3 {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }
+
+        .type-wav, .type-wave {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }
+
+        .type-mp4 {
+            background: rgba(219, 39, 119, 0.2);
+            color: #f9a8d4;
+        }
+
+        .type-hl7-scp-ecg {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
         }
 
         .document-meta {
@@ -551,8 +626,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>HL7 Document Viewer <span style="font-size: 0.6em; font-weight: normal; color: var(--text-secondary);">v<span id="headerVersion">1.0.1</span></span></h1>
-            <p>Parse HL7 messages and extract embedded documents (JPEG, PNG, PDF)</p>
+            <h1>HL7 Document Viewer <span style="font-size: 0.6em; font-weight: normal; color: var(--text-secondary);">v<span id="headerVersion">1.0.2</span></span></h1>
+            <p>Parse HL7 messages and extract embedded documents (Images, PDFs, Audio, Video, Documents, and more)</p>
         </header>
 
         <div class="main-content">
@@ -626,7 +701,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             <div class="footer-content">
                 <a href="https://github.com/flatmapit/hl7-view" target="_blank" rel="noopener noreferrer">View on GitHub</a>
                 <a href="https://github.com/flatmapit/hl7-view/releases" target="_blank" rel="noopener noreferrer">Download to run this locally</a>
-                <span>Version <span id="version">1.0.1</span></span>
+                <span>Version <span id="version">1.0.2</span></span>
                 <span>&copy; 2025 Chris Gentle <a href="https://flatmapit.com" target="_blank" rel="noopener noreferrer">flatmapit.com</a></span>
                 <a href="https://github.com/flatmapit/hl7-view/blob/main/LICENSE?plain=1" target="_blank" rel="noopener noreferrer">MIT License</a>
             </div>
@@ -644,13 +719,25 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
 
     <script>
         // Application version
-        const APP_VERSION = '1.0.1';
+        const APP_VERSION = '1.0.2';
 
         // Magic number patterns for base64 encoded files
         const MAGIC_NUMBERS = {
             jpeg: ['/9j/', 'FFD8FF'],
+            jpg: ['/9j/', 'FFD8FF'],
             png: ['iVBORw0KGgo', '89504E47'],
-            pdf: ['JVBERi', '25504446']
+            pdf: ['JVBERi', '25504446'],
+            gif: ['R0lGOD', '47494638'],
+            tiff: ['SUkqAA', '49492A00', '4D4D002A'],
+            zip: ['UEsDBBQ', '504B0304'],
+            xml: ['PD94bWw', '3C3F786D'],
+            svg: ['PHN2Zy', 'PD94bWwg'],
+            dicom: ['RE1JQw', '4449434D'],
+            doc: ['0M8R4KG', 'D0CF11E0'],
+            docx: ['UEsDBBQ', '504B0304'],
+            mp3: ['SUQzB', '494433'],
+            wav: ['UklGR', '52494646'],
+            mp4: ['AAAAIG', '00000020', 'ftyp']
         };
 
         // HL7 field separator defaults
@@ -759,6 +846,44 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                         dataType = 'jpeg';
                     } else if (subtypeHint.includes('png') || typeHint.includes('png')) {
                         dataType = 'png';
+                    } else if (subtypeHint.includes('gif') || typeHint.includes('gif')) {
+                        dataType = 'gif';
+                    } else if (subtypeHint.includes('tiff') || subtypeHint.includes('tif') ||
+                               typeHint.includes('tiff') || typeHint.includes('tif')) {
+                        dataType = 'tiff';
+                    } else if (subtypeHint.includes('rtf') || typeHint.includes('rtf')) {
+                        dataType = 'rtf';
+                    } else if (subtypeHint.includes('html') || typeHint.includes('html') ||
+                               subtypeHint.includes('htm') || typeHint.includes('htm')) {
+                        dataType = 'html';
+                    } else if (subtypeHint.includes('zip') || typeHint.includes('zip')) {
+                        dataType = 'zip';
+                    } else if (subtypeHint.includes('xml') || typeHint.includes('xml')) {
+                        dataType = 'xml';
+                    } else if (subtypeHint.includes('svg') || typeHint.includes('svg')) {
+                        dataType = 'svg';
+                    } else if (subtypeHint.includes('dicom') || typeHint.includes('dicom') ||
+                               subtypeHint.includes('dcm') || typeHint.includes('dcm')) {
+                        dataType = 'dicom';
+                    } else if (subtypeHint.includes('msword') || typeHint.includes('msword') ||
+                               subtypeHint.includes('word') || typeHint.includes('word') ||
+                               subtypeHint.includes('doc') && !subtypeHint.includes('docx')) {
+                        dataType = 'doc';
+                    } else if (subtypeHint.includes('wordprocessingml') || 
+                               subtypeHint.includes('docx') || typeHint.includes('docx')) {
+                        dataType = 'docx';
+                    } else if (subtypeHint.includes('mpeg') || subtypeHint.includes('mp3') ||
+                               typeHint.includes('mpeg') || typeHint.includes('mp3')) {
+                        dataType = 'mp3';
+                    } else if (subtypeHint.includes('wav') || typeHint.includes('wav') ||
+                               subtypeHint.includes('wave') || typeHint.includes('wave')) {
+                        dataType = 'wav';
+                    } else if (subtypeHint.includes('mp4') || typeHint.includes('mp4') ||
+                               subtypeHint.includes('mpeg4') || typeHint.includes('mpeg4')) {
+                        dataType = 'mp4';
+                    } else if (subtypeHint.includes('hl7-scp-ecg') || typeHint.includes('hl7-scp-ecg') ||
+                               subtypeHint.includes('ecg') || typeHint.includes('ecg')) {
+                        dataType = 'hl7-scp-ecg';
                     }
                 }
             }
@@ -780,6 +905,20 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 if (hints.includes('pdf')) dataType = 'pdf';
                 else if (hints.includes('jpeg') || hints.includes('jpg')) dataType = 'jpeg';
                 else if (hints.includes('png')) dataType = 'png';
+                else if (hints.includes('gif')) dataType = 'gif';
+                else if (hints.includes('tiff') || hints.includes('tif')) dataType = 'tiff';
+                else if (hints.includes('rtf')) dataType = 'rtf';
+                else if (hints.includes('html') || hints.includes('htm')) dataType = 'html';
+                else if (hints.includes('zip')) dataType = 'zip';
+                else if (hints.includes('xml')) dataType = 'xml';
+                else if (hints.includes('svg')) dataType = 'svg';
+                else if (hints.includes('dicom') || hints.includes('dcm')) dataType = 'dicom';
+                else if (hints.includes('msword') || (hints.includes('doc') && !hints.includes('docx'))) dataType = 'doc';
+                else if (hints.includes('wordprocessingml') || hints.includes('docx')) dataType = 'docx';
+                else if (hints.includes('mpeg') || hints.includes('mp3')) dataType = 'mp3';
+                else if (hints.includes('wav') || hints.includes('wave')) dataType = 'wav';
+                else if (hints.includes('mp4') || hints.includes('mpeg4')) dataType = 'mp4';
+                else if (hints.includes('hl7-scp-ecg') || hints.includes('ecg')) dataType = 'hl7-scp-ecg';
             }
 
             if (base64Data && dataType) {
@@ -832,6 +971,59 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 }
                 if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
                     return 'pdf';
+                }
+                if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+                    return 'gif';
+                }
+                if ((bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2A && bytes[3] === 0x00) ||
+                    (bytes[0] === 0x4D && bytes[1] === 0x4D && bytes[2] === 0x00 && bytes[3] === 0x2A)) {
+                    return 'tiff';
+                }
+                if (bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x03 && bytes[3] === 0x04) {
+                    // Could be ZIP, DOCX, or other Office formats
+                    // Check further to distinguish
+                    if (decoded.length > 30) {
+                        const moreDecoded = atob(base64Data.substring(0, 100));
+                        if (moreDecoded.includes('word/') || moreDecoded.includes('WordDocument')) {
+                            return 'docx';
+                        }
+                    }
+                    return 'zip';
+                }
+                if (bytes[0] === 0xD0 && bytes[1] === 0xCF && bytes[2] === 0x11 && bytes[3] === 0xE0) {
+                    return 'doc';
+                }
+                if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+                    // RIFF - could be WAV or other formats
+                    if (decoded.length > 8) {
+                        const moreDecoded = atob(base64Data.substring(0, 20));
+                        if (moreDecoded.includes('WAVE')) {
+                            return 'wav';
+                        }
+                    }
+                }
+                if (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) {
+                    return 'mp3';
+                }
+                // Check for XML/SVG (starts with < or <?xml)
+                if (bytes[0] === 0x3C) {
+                    const decodedStr = atob(base64Data.substring(0, 50));
+                    if (decodedStr.includes('<svg') || decodedStr.includes('xmlns="http://www.w3.org/2000/svg"')) {
+                        return 'svg';
+                    }
+                    if (decodedStr.includes('<?xml') || decodedStr.includes('<xml')) {
+                        return 'xml';
+                    }
+                    if (decodedStr.includes('<html') || decodedStr.includes('<!DOCTYPE html')) {
+                        return 'html';
+                    }
+                }
+                // Check for DICOM (starts with DICM at offset 128)
+                if (decoded.length > 132) {
+                    const dicomCheck = atob(base64Data.substring(0, 150));
+                    if (dicomCheck.substring(128, 132) === 'DICM') {
+                        return 'dicom';
+                    }
                 }
             } catch (e) {
                 // Invalid base64
@@ -932,16 +1124,68 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 const dataUrl = `data:${mimeType};base64,${doc.data}`;
 
                 let preview = '';
-                if (doc.type === 'pdf') {
+                const imageTypes = ['jpeg', 'jpg', 'png', 'gif', 'tiff', 'tif', 'svg'];
+                const audioTypes = ['mp3', 'wav', 'wave'];
+                const videoTypes = ['mp4'];
+                const documentTypes = ['pdf', 'doc', 'docx', 'rtf', 'html', 'htm', 'xml'];
+                const archiveTypes = ['zip'];
+                const medicalTypes = ['dicom', 'dcm', 'hl7-scp-ecg'];
+
+                if (imageTypes.includes(doc.type)) {
+                    preview = `<img src="${dataUrl}" alt="Document ${i + 1}" onclick="viewDocument(${i})" style="cursor: pointer;">`;
+                } else if (audioTypes.includes(doc.type)) {
                     preview = `
                         <div class="pdf-placeholder">
-                            <div class="pdf-icon">📄</div>
-                            <span>PDF Document</span>
-                            <button class="btn-secondary" onclick="viewDocument(${i})">View PDF</button>
+                            <div class="pdf-icon">🎵</div>
+                            <span>Audio File</span>
+                            <audio controls style="width: 100%; margin-top: 0.5rem;">
+                                <source src="${dataUrl}" type="${mimeType}">
+                            </audio>
+                        </div>
+                    `;
+                } else if (videoTypes.includes(doc.type)) {
+                    preview = `
+                        <div class="pdf-placeholder">
+                            <div class="pdf-icon">🎬</div>
+                            <span>Video File</span>
+                            <video controls style="width: 100%; max-height: 200px; margin-top: 0.5rem;">
+                                <source src="${dataUrl}" type="${mimeType}">
+                            </video>
+                        </div>
+                    `;
+                } else if (documentTypes.includes(doc.type)) {
+                    const icon = doc.type === 'pdf' ? '📄' : doc.type === 'html' || doc.type === 'htm' ? '🌐' : '📝';
+                    preview = `
+                        <div class="pdf-placeholder">
+                            <div class="pdf-icon">${icon}</div>
+                            <span>${doc.type.toUpperCase()} Document</span>
+                            <button class="btn-secondary" onclick="viewDocument(${i})">View Document</button>
+                        </div>
+                    `;
+                } else if (archiveTypes.includes(doc.type)) {
+                    preview = `
+                        <div class="pdf-placeholder">
+                            <div class="pdf-icon">📦</div>
+                            <span>ZIP Archive</span>
+                            <button class="btn-secondary" onclick="downloadDocument(${i})">Download</button>
+                        </div>
+                    `;
+                } else if (medicalTypes.includes(doc.type)) {
+                    preview = `
+                        <div class="pdf-placeholder">
+                            <div class="pdf-icon">🏥</div>
+                            <span>${doc.type.toUpperCase()} File</span>
+                            <button class="btn-secondary" onclick="downloadDocument(${i})">Download</button>
                         </div>
                     `;
                 } else {
-                    preview = `<img src="${dataUrl}" alt="Document ${i + 1}" onclick="viewDocument(${i})" style="cursor: pointer;">`;
+                    preview = `
+                        <div class="pdf-placeholder">
+                            <div class="pdf-icon">📄</div>
+                            <span>${doc.type.toUpperCase()} File</span>
+                            <button class="btn-secondary" onclick="downloadDocument(${i})">Download</button>
+                        </div>
+                    `;
                 }
 
                 return `
@@ -975,7 +1219,25 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 jpeg: 'image/jpeg',
                 jpg: 'image/jpeg',
                 png: 'image/png',
-                pdf: 'application/pdf'
+                pdf: 'application/pdf',
+                gif: 'image/gif',
+                tiff: 'image/tiff',
+                tif: 'image/tiff',
+                rtf: 'application/rtf',
+                html: 'text/html',
+                htm: 'text/html',
+                zip: 'application/zip',
+                xml: 'application/xml',
+                svg: 'image/svg+xml',
+                dicom: 'application/dicom',
+                dcm: 'application/dicom',
+                doc: 'application/msword',
+                docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                mp3: 'audio/mpeg',
+                wav: 'audio/wav',
+                wave: 'audio/wav',
+                mp4: 'video/mp4',
+                'hl7-scp-ecg': 'application/x-hl7-scp-ecg'
             };
             return types[type] || 'application/octet-stream';
         }
@@ -987,10 +1249,56 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             const mimeType = getMimeType(doc.type);
             const dataUrl = `data:${mimeType};base64,${doc.data}`;
 
-            if (doc.type === 'pdf') {
-                modalBody.innerHTML = `<iframe src="${dataUrl}"></iframe>`;
-            } else {
+            const imageTypes = ['jpeg', 'jpg', 'png', 'gif', 'tiff', 'tif', 'svg'];
+            const audioTypes = ['mp3', 'wav', 'wave'];
+            const videoTypes = ['mp4'];
+            const documentTypes = ['pdf', 'html', 'htm', 'xml'];
+            const viewableTypes = ['rtf', 'doc', 'docx'];
+
+            if (imageTypes.includes(doc.type)) {
                 modalBody.innerHTML = `<img src="${dataUrl}" alt="Document">`;
+            } else if (audioTypes.includes(doc.type)) {
+                modalBody.innerHTML = `
+                    <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 8px; text-align: center;">
+                        <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Audio Player</h3>
+                        <audio controls style="width: 100%; max-width: 600px;">
+                            <source src="${dataUrl}" type="${mimeType}">
+                        </audio>
+                    </div>
+                `;
+            } else if (videoTypes.includes(doc.type)) {
+                modalBody.innerHTML = `
+                    <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 8px; text-align: center;">
+                        <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Video Player</h3>
+                        <video controls style="width: 100%; max-width: 800px; max-height: 70vh;">
+                            <source src="${dataUrl}" type="${mimeType}">
+                        </video>
+                    </div>
+                `;
+            } else if (doc.type === 'pdf') {
+                modalBody.innerHTML = `<iframe src="${dataUrl}"></iframe>`;
+            } else if (doc.type === 'html' || doc.type === 'htm') {
+                modalBody.innerHTML = `<iframe src="${dataUrl}" style="width: 80vw; height: 85vh;"></iframe>`;
+            } else if (doc.type === 'xml' || doc.type === 'svg') {
+                modalBody.innerHTML = `<iframe src="${dataUrl}" style="width: 80vw; height: 85vh;"></iframe>`;
+            } else if (viewableTypes.includes(doc.type)) {
+                // For RTF, DOC, DOCX - show download option since browsers can't display them directly
+                modalBody.innerHTML = `
+                    <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 8px; text-align: center; color: var(--text-primary);">
+                        <h3 style="margin-bottom: 1rem;">${doc.type.toUpperCase()} Document</h3>
+                        <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">This document type cannot be previewed in the browser.</p>
+                        <button class="btn-primary" onclick="downloadDocument(${index}); closeModal();">Download Document</button>
+                    </div>
+                `;
+            } else {
+                // For other types (zip, dicom, etc.) - show download option
+                modalBody.innerHTML = `
+                    <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 8px; text-align: center; color: var(--text-primary);">
+                        <h3 style="margin-bottom: 1rem;">${doc.type.toUpperCase()} File</h3>
+                        <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">This file type cannot be previewed in the browser.</p>
+                        <button class="btn-primary" onclick="downloadDocument(${index}); closeModal();">Download File</button>
+                    </div>
+                `;
             }
 
             modal.classList.add('active');
@@ -1004,7 +1312,34 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
         function downloadDocument(index) {
             const doc = extractedDocuments[index];
             const mimeType = getMimeType(doc.type);
-            const extension = doc.type === 'jpeg' ? 'jpg' : doc.type;
+            
+            // Map types to file extensions
+            const extensionMap = {
+                jpeg: 'jpg',
+                jpg: 'jpg',
+                png: 'png',
+                pdf: 'pdf',
+                gif: 'gif',
+                tiff: 'tiff',
+                tif: 'tif',
+                rtf: 'rtf',
+                html: 'html',
+                htm: 'htm',
+                zip: 'zip',
+                xml: 'xml',
+                svg: 'svg',
+                dicom: 'dcm',
+                dcm: 'dcm',
+                doc: 'doc',
+                docx: 'docx',
+                mp3: 'mp3',
+                wav: 'wav',
+                wave: 'wav',
+                mp4: 'mp4',
+                'hl7-scp-ecg': 'ecg'
+            };
+            
+            const extension = extensionMap[doc.type] || doc.type;
 
             const link = document.createElement('a');
             link.href = `data:${mimeType};base64,${doc.data}`;

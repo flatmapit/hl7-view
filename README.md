@@ -2,12 +2,12 @@
 
 A web application for parsing HL7 messages and extracting embedded documents.
 
-**Version:** 1.0.1  
+**Version:** 1.0.2  
 **🌐 [View Live Site](https://flatmapit.github.io/hl7-view/)**
 
 ## Overview
 
-This tool parses HL7 messages and extracts embedded documents (JPEG, PNG, PDF) from OBX segments. It displays parsed segments and allows viewing and downloading extracted documents.
+This tool parses HL7 messages and extracts embedded documents from OBX segments. It supports a wide variety of file types including images, PDFs, audio, video, documents, archives, and medical formats. It displays parsed segments and allows viewing and downloading extracted documents.
 
 ## Usage
 
@@ -21,8 +21,14 @@ This tool parses HL7 messages and extracts embedded documents (JPEG, PNG, PDF) f
 
 - Parse HL7 messages and display segments
 - Extract embedded documents from OBX segments
-- Support for JPEG, PNG, and PDF documents
-- View documents in a modal overlay
+- Support for multiple file types:
+  - **Images**: JPEG, PNG, GIF, TIFF, SVG
+  - **Documents**: PDF, RTF, HTML, XML, DOC, DOCX
+  - **Audio**: MP3, WAV
+  - **Video**: MP4
+  - **Archives**: ZIP
+  - **Medical**: DICOM, HL7-SCP-ECG
+- View documents in a modal overlay (images, PDFs, HTML, XML, audio, video)
 - Download extracted documents
 - Load sample HL7 message for testing
 
@@ -31,10 +37,10 @@ This tool parses HL7 messages and extracts embedded documents (JPEG, PNG, PDF) f
 The application is a single HTML file with embedded CSS and JavaScript. It runs entirely in the browser with no server required.
 
 Document extraction works by:
-- Parsing OBX segments with Value Type "ED" (Encapsulated Data)
+- Parsing OBX segments with Value Type "ED" (Encapsulated Data) or "RP" (Reference Pointer)
 - Extracting base64-encoded data from OBX-5 field
-- Detecting document type from MIME type hints or magic number patterns
-- Rendering documents as images or PDFs
+- Detecting document type from MIME type hints, magic number patterns, or OBX segment identifiers
+- Rendering documents appropriately based on type (images, PDFs, audio/video players, or download options)
 
 ## File Structure
 
