@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="version" content="1.0.0">
     <title>HL7 Document Viewer</title>
     <!-- GitHub Pages deployment -->
     <style>
@@ -625,6 +626,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             <div class="footer-content">
                 <a href="https://github.com/flatmapit/hl7-view" target="_blank" rel="noopener noreferrer">View on GitHub</a>
                 <a href="https://github.com/flatmapit/hl7-view/releases" target="_blank" rel="noopener noreferrer">Download to run this locally</a>
+                <span>Version <span id="version">1.0.0</span></span>
                 <span>&copy; 2025 Chris Gentle <a href="https://flatmapit.com" target="_blank" rel="noopener noreferrer">flatmapit.com</a></span>
                 <a href="LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>
             </div>
@@ -641,6 +643,9 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
     <div class="toast" id="toast"></div>
 
     <script>
+        // Application version
+        const APP_VERSION = '1.0.0';
+
         // Magic number patterns for base64 encoded files
         const MAGIC_NUMBERS = {
             jpeg: ['/9j/', 'FFD8FF'],
@@ -1076,6 +1081,14 @@ OBX|5|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
         document.getElementById('imageModal').addEventListener('click', (e) => {
             if (e.target.id === 'imageModal') {
                 closeModal();
+            }
+        });
+
+        // Set version in footer
+        document.addEventListener('DOMContentLoaded', () => {
+            const versionEl = document.getElementById('version');
+            if (versionEl) {
+                versionEl.textContent = APP_VERSION;
             }
         });
     </script>
