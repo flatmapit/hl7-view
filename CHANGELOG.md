@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.0.6] - 2025-12-12
 
 ### Added
 - HL7 field name display in segment detail view
