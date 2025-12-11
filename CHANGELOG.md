@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.7] - 2025-12-12
+
+### Changed
+- Updated sample HL7 message to use version 2.4 instead of 2.5
+- Improved "Open in HL7 Spy" button text and messaging for clarity
+- Updated toast notification to explain file association behavior
+
 ## [1.0.6] - 2025-12-12
 
 ### Added
