@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.10] - 2025-12-XX
+
+### Fixed
+- Fixed pop-out overlay to be scrollable and show interactive segment list
+- Overlay now works as a proportionally larger version of the parsed segments panel
+- Segments in overlay are now clickable to show/hide field details
+- Improved overlay layout with two-column design (segment list and detail view)
+
 ## [1.0.9] - 2025-12-XX
 
 ### Added
