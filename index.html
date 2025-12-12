@@ -1488,52 +1488,11 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
         function extractPDFProperties(base64Data) {
             const properties = {};
             try {
-                const binary = atob(base64Data.substring(0, Math.min(base64Data.length, 50000)));
+                // Decode more of the PDF - search up to 200KB or full file if smaller
+                const searchLimit = Math.min(base64Data.length, Math.floor(200000 * 4 / 3));
+                const binary = atob(base64Data.substring(0, searchLimit));
                 
-                // Look for PDF metadata in xref and trailer sections
-                const metadataMatch = binary.match(/\/Metadata\s+(\d+)\s+\d+\s+R/);
-                if (metadataMatch) {
-                    // Metadata object reference found
-                    properties['HasMetadata'] = 'Yes';
-                }
-                
-                // Extract common PDF properties from document info
-                const titleMatch = binary.match(/\/Title\s*\(([^)]+)\)/);
-                if (titleMatch) {
-                    properties['Title'] = decodePDFString(titleMatch[1]);
-                }
-                
-                const authorMatch = binary.match(/\/Author\s*\(([^)]+)\)/);
-                if (authorMatch) {
-                    properties['Author'] = decodePDFString(authorMatch[1]);
-                }
-                
-                const subjectMatch = binary.match(/\/Subject\s*\(([^)]+)\)/);
-                if (subjectMatch) {
-                    properties['Subject'] = decodePDFString(subjectMatch[1]);
-                }
-                
-                const creatorMatch = binary.match(/\/Creator\s*\(([^)]+)\)/);
-                if (creatorMatch) {
-                    properties['Creator'] = decodePDFString(creatorMatch[1]);
-                }
-                
-                const producerMatch = binary.match(/\/Producer\s*\(([^)]+)\)/);
-                if (producerMatch) {
-                    properties['Producer'] = decodePDFString(producerMatch[1]);
-                }
-                
-                const creationDateMatch = binary.match(/\/CreationDate\s*\(([^)]+)\)/);
-                if (creationDateMatch) {
-                    properties['CreationDate'] = decodePDFString(creationDateMatch[1]);
-                }
-                
-                const modDateMatch = binary.match(/\/ModDate\s*\(([^)]+)\)/);
-                if (modDateMatch) {
-                    properties['ModDate'] = decodePDFString(modDateMatch[1]);
-                }
-                
-                // Check PDF version
+                // Check PDF version (usually at the start)
                 const versionMatch = binary.match(/%PDF-(\d\.\d)/);
                 if (versionMatch) {
                     properties['PDFVersion'] = versionMatch[1];
@@ -1543,10 +1502,129 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 if (binary.includes('/Encrypt')) {
                     properties['Encrypted'] = 'Yes';
                 }
+                
+                // Look for Info dictionary - it can be referenced in trailer or as an object
+                // Pattern: /Info << ... >> or /Info \d+ \d+ R (indirect reference)
+                const infoDictPatterns = [
+                    // Direct dictionary
+                    /\/Info\s*<<([^>]*)>>/gs,
+                    // Indirect reference - try to find the object
+                    /(\d+)\s+(\d+)\s+obj\s*<<[^>]*\/Type\s*\/Info[^>]*>>/gs
+                ];
+                
+                // Property names to search for
+                const propertyNames = ['Title', 'Author', 'Subject', 'Creator', 'Producer', 
+                                      'CreationDate', 'ModDate', 'Keywords', 'Trapped'];
+                
+                // First, try to find Info dictionary directly
+                let infoDictContent = '';
+                const directInfoMatch = binary.match(/\/Info\s*<<([^>]*)>>/s);
+                if (directInfoMatch) {
+                    infoDictContent = directInfoMatch[1];
+                } else {
+                    // Try to find Info object reference and extract it
+                    const infoRefMatch = binary.match(/\/Info\s+(\d+)\s+(\d+)\s+R/);
+                    if (infoRefMatch) {
+                        const objNum = infoRefMatch[1];
+                        const genNum = infoRefMatch[2];
+                        // Look for the object definition
+                        const objPattern = new RegExp(`${objNum}\\s+${genNum}\\s+obj\\s*<<([^>]*)>>`, 's');
+                        const objMatch = binary.match(objPattern);
+                        if (objMatch) {
+                            infoDictContent = objMatch[1];
+                        }
+                    }
+                }
+                
+                // Extract properties from Info dictionary if found
+                if (infoDictContent) {
+                    for (const propName of propertyNames) {
+                        // Try literal string format: /Title (value)
+                        const literalPattern = new RegExp(`/${propName}\\s*\\(([^)]*)\\)`, 's');
+                        const literalMatch = infoDictContent.match(literalPattern);
+                        if (literalMatch) {
+                            properties[propName] = decodePDFString(literalMatch[1]);
+                            continue;
+                        }
+                        
+                        // Try hex string format: /Title <48656C6C6F>
+                        const hexPattern = new RegExp(`/${propName}\\s*<([0-9A-Fa-f]+)>`, 's');
+                        const hexMatch = infoDictContent.match(hexPattern);
+                        if (hexMatch) {
+                            properties[propName] = decodePDFHexString(hexMatch[1]);
+                            continue;
+                        }
+                    }
+                }
+                
+                // Also search the entire binary for properties (fallback)
+                // This helps if Info dictionary is in a different format or location
+                for (const propName of propertyNames) {
+                    if (!properties[propName]) {
+                        // Try literal string format
+                        const literalPattern = new RegExp(`/${propName}\\s*\\(([^)]*)\\)`, 'gs');
+                        const literalMatch = binary.match(literalPattern);
+                        if (literalMatch) {
+                            // Take the first match
+                            const value = decodePDFString(literalMatch[0].match(/\(([^)]*)\)/)[1]);
+                            if (value && value.trim()) {
+                                properties[propName] = value;
+                            }
+                            continue;
+                        }
+                        
+                        // Try hex string format
+                        const hexPattern = new RegExp(`/${propName}\\s*<([0-9A-Fa-f]+)>`, 'gs');
+                        const hexMatch = binary.match(hexPattern);
+                        if (hexMatch) {
+                            const value = decodePDFHexString(hexMatch[0].match(/<([0-9A-Fa-f]+)>/)[1]);
+                            if (value && value.trim()) {
+                                properties[propName] = value;
+                            }
+                        }
+                    }
+                }
+                
+                // Look for XMP metadata (XML-based metadata)
+                const xmpMatch = binary.match(/<x:xmpmeta[^>]*>([\s\S]*?)<\/x:xmpmeta>/i);
+                if (xmpMatch) {
+                    const xmpContent = xmpMatch[1];
+                    // Extract common XMP properties
+                    const xmpTitleMatch = xmpContent.match(/<dc:title[^>]*>[\s\S]*?<rdf:li[^>]*>([^<]+)<\/rdf:li>/i);
+                    if (xmpTitleMatch && !properties['Title']) {
+                        properties['Title'] = xmpTitleMatch[1].trim();
+                    }
+                    const xmpCreatorMatch = xmpContent.match(/<dc:creator[^>]*>[\s\S]*?<rdf:li[^>]*>([^<]+)<\/rdf:li>/i);
+                    if (xmpCreatorMatch && !properties['Author']) {
+                        properties['Author'] = xmpCreatorMatch[1].trim();
+                    }
+                }
+                
             } catch (e) {
                 // Error parsing PDF
             }
             return properties;
+        }
+        
+        function decodePDFHexString(hexStr) {
+            try {
+                // Remove whitespace and decode hex pairs
+                const cleanHex = hexStr.replace(/\s/g, '');
+                let result = '';
+                for (let i = 0; i < cleanHex.length; i += 2) {
+                    const hexByte = cleanHex.substr(i, 2);
+                    const charCode = parseInt(hexByte, 16);
+                    if (charCode >= 32 && charCode < 127) {
+                        result += String.fromCharCode(charCode);
+                    } else if (charCode === 0) {
+                        // Null terminator, stop
+                        break;
+                    }
+                }
+                return result;
+            } catch (e) {
+                return '';
+            }
         }
 
         function decodePDFString(str) {
