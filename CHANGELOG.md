@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.16] - 2025-01-XX
+
+### Fixed
+- Fixed double rendering issue when highlighting fields in paste box - textarea text now becomes transparent when highlighting is active, preventing overlapping text display
+
 ## [1.0.10] - 2025-12-XX
 
 ### Fixed

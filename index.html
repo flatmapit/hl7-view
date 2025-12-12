@@ -561,11 +561,13 @@
         .input-panel textarea {
             position: relative;
             z-index: 2;
-            background: transparent;
+            background: var(--bg-primary);
         }
 
-        .input-panel textarea:not(.highlight-active) {
-            background: var(--bg-primary);
+        .input-panel textarea.highlight-active {
+            background: transparent;
+            color: transparent;
+            caret-color: var(--text-primary);
         }
 
         /* Clear highlight button */

@@ -2,7 +2,7 @@
 
 A web application for parsing HL7 messages and extracting embedded documents.
 
-**Version:** 1.0.15  
+**Version:** 1.0.16  
 **🌐 [View Live Site](https://flatmapit.github.io/hl7-view/)**
 
 ## Overview
