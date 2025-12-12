@@ -1488,8 +1488,8 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
         function extractPDFProperties(base64Data) {
             const properties = {};
             try {
-                // Decode more of the PDF - search up to 200KB or full file if smaller
-                const searchLimit = Math.min(base64Data.length, Math.floor(200000 * 4 / 3));
+                // Decode the entire PDF file (or up to 1MB to avoid memory issues)
+                const searchLimit = Math.min(base64Data.length, Math.floor(1000000 * 4 / 3));
                 const binary = atob(base64Data.substring(0, searchLimit));
                 
                 // Check PDF version (usually at the start)
@@ -1503,32 +1503,52 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                     properties['Encrypted'] = 'Yes';
                 }
                 
-                // Look for Info dictionary - it can be referenced in trailer or as an object
-                // Pattern: /Info << ... >> or /Info \d+ \d+ R (indirect reference)
-                const infoDictPatterns = [
-                    // Direct dictionary
-                    /\/Info\s*<<([^>]*)>>/gs,
-                    // Indirect reference - try to find the object
-                    /(\d+)\s+(\d+)\s+obj\s*<<[^>]*\/Type\s*\/Info[^>]*>>/gs
-                ];
+                // Function to extract all key-value pairs from a dictionary string
+                function extractAllPropertiesFromDict(dictContent) {
+                    const foundProps = {};
+                    
+                    // Match all property patterns: /KeyName (value) or /KeyName <hexvalue>
+                    // This regex finds all /KeyName followed by either (value) or <hexvalue>
+                    const propPattern = /\/([A-Za-z][A-Za-z0-9]*)\s*(?:\(([^)]*)\)|<([0-9A-Fa-f\s]+)>)/g;
+                    let match;
+                    
+                    while ((match = propPattern.exec(dictContent)) !== null) {
+                        const propName = match[1];
+                        let propValue = '';
+                        
+                        if (match[2] !== undefined) {
+                            // Literal string value
+                            propValue = decodePDFString(match[2]);
+                        } else if (match[3] !== undefined) {
+                            // Hex string value
+                            propValue = decodePDFHexString(match[3]);
+                        }
+                        
+                        if (propValue && propValue.trim() && !foundProps[propName]) {
+                            foundProps[propName] = propValue.trim();
+                        }
+                    }
+                    
+                    return foundProps;
+                }
                 
-                // Property names to search for
-                const propertyNames = ['Title', 'Author', 'Subject', 'Creator', 'Producer', 
-                                      'CreationDate', 'ModDate', 'Keywords', 'Trapped'];
-                
-                // First, try to find Info dictionary directly
+                // Find Info dictionary - try multiple approaches
                 let infoDictContent = '';
+                
+                // Approach 1: Direct Info dictionary in trailer
                 const directInfoMatch = binary.match(/\/Info\s*<<([^>]*)>>/s);
                 if (directInfoMatch) {
                     infoDictContent = directInfoMatch[1];
-                } else {
-                    // Try to find Info object reference and extract it
+                }
+                
+                // Approach 2: Info as indirect object reference
+                if (!infoDictContent) {
                     const infoRefMatch = binary.match(/\/Info\s+(\d+)\s+(\d+)\s+R/);
                     if (infoRefMatch) {
                         const objNum = infoRefMatch[1];
                         const genNum = infoRefMatch[2];
-                        // Look for the object definition
-                        const objPattern = new RegExp(`${objNum}\\s+${genNum}\\s+obj\\s*<<([^>]*)>>`, 's');
+                        // Look for the object definition - handle multiline
+                        const objPattern = new RegExp(`${objNum}\\s+${genNum}\\s+obj[\\s\\S]*?<<([^>]*)>>`, 's');
                         const objMatch = binary.match(objPattern);
                         if (objMatch) {
                             infoDictContent = objMatch[1];
@@ -1536,67 +1556,106 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                     }
                 }
                 
-                // Extract properties from Info dictionary if found
+                // Approach 3: Look for any object that might be the Info dictionary
+                if (!infoDictContent) {
+                    // Search for objects that contain common Info dictionary keys
+                    const infoObjPattern = /(\d+)\s+(\d+)\s+obj\s*<<([^>]*)>>/gs;
+                    let objMatch;
+                    while ((objMatch = infoObjPattern.exec(binary)) !== null) {
+                        const objContent = objMatch[3];
+                        // Check if this looks like an Info dictionary (has common keys)
+                        if (objContent.includes('/Title') || objContent.includes('/Author') || 
+                            objContent.includes('/Subject') || objContent.includes('/Creator')) {
+                            infoDictContent = objContent;
+                            break;
+                        }
+                    }
+                }
+                
+                // Extract ALL properties from Info dictionary (including custom ones)
                 if (infoDictContent) {
-                    for (const propName of propertyNames) {
-                        // Try literal string format: /Title (value)
-                        const literalPattern = new RegExp(`/${propName}\\s*\\(([^)]*)\\)`, 's');
-                        const literalMatch = infoDictContent.match(literalPattern);
-                        if (literalMatch) {
-                            properties[propName] = decodePDFString(literalMatch[1]);
-                            continue;
-                        }
-                        
-                        // Try hex string format: /Title <48656C6C6F>
-                        const hexPattern = new RegExp(`/${propName}\\s*<([0-9A-Fa-f]+)>`, 's');
-                        const hexMatch = infoDictContent.match(hexPattern);
-                        if (hexMatch) {
-                            properties[propName] = decodePDFHexString(hexMatch[1]);
-                            continue;
-                        }
+                    const dictProps = extractAllPropertiesFromDict(infoDictContent);
+                    Object.assign(properties, dictProps);
+                }
+                
+                // Also search the entire binary for any property patterns (fallback for custom properties)
+                // This catches properties that might be outside the Info dictionary
+                const globalPropPattern = /\/([A-Za-z][A-Za-z0-9]*)\s*(?:\(([^)]*)\)|<([0-9A-Fa-f\s]+)>)/g;
+                let globalMatch;
+                const foundGlobalProps = {};
+                let matchCount = 0;
+                
+                // Limit to first 100 matches to avoid performance issues
+                while ((globalMatch = globalPropPattern.exec(binary)) !== null && matchCount < 100) {
+                    const propName = globalMatch[1];
+                    // Skip if we already have this property
+                    if (properties[propName] || foundGlobalProps[propName]) {
+                        continue;
+                    }
+                    
+                    let propValue = '';
+                    if (globalMatch[2] !== undefined) {
+                        propValue = decodePDFString(globalMatch[2]);
+                    } else if (globalMatch[3] !== undefined) {
+                        propValue = decodePDFHexString(globalMatch[3]);
+                    }
+                    
+                    // Only add if it looks like a meaningful property (not PDF internals)
+                    if (propValue && propValue.trim() && 
+                        !propName.match(/^(Type|Subtype|Filter|Length|Width|Height|Bits|ColorSpace|Font|Resources|MediaBox|Page|Parent|Kids|Contents|Rotate|Annots|XObject|ExtGState|ProcSet)$/i)) {
+                        foundGlobalProps[propName] = propValue.trim();
+                    }
+                    matchCount++;
+                }
+                
+                // Add global properties that aren't already in properties
+                for (const [key, value] of Object.entries(foundGlobalProps)) {
+                    if (!properties[key]) {
+                        properties[key] = value;
                     }
                 }
                 
-                // Also search the entire binary for properties (fallback)
-                // This helps if Info dictionary is in a different format or location
-                for (const propName of propertyNames) {
-                    if (!properties[propName]) {
-                        // Try literal string format
-                        const literalPattern = new RegExp(`/${propName}\\s*\\(([^)]*)\\)`, 'gs');
-                        const literalMatch = binary.match(literalPattern);
-                        if (literalMatch) {
-                            // Take the first match
-                            const value = decodePDFString(literalMatch[0].match(/\(([^)]*)\)/)[1]);
-                            if (value && value.trim()) {
-                                properties[propName] = value;
-                            }
-                            continue;
-                        }
-                        
-                        // Try hex string format
-                        const hexPattern = new RegExp(`/${propName}\\s*<([0-9A-Fa-f]+)>`, 'gs');
-                        const hexMatch = binary.match(hexPattern);
-                        if (hexMatch) {
-                            const value = decodePDFHexString(hexMatch[0].match(/<([0-9A-Fa-f]+)>/)[1]);
-                            if (value && value.trim()) {
-                                properties[propName] = value;
-                            }
-                        }
-                    }
-                }
-                
-                // Look for XMP metadata (XML-based metadata)
+                // Look for XMP metadata (XML-based metadata) - extract more properties
                 const xmpMatch = binary.match(/<x:xmpmeta[^>]*>([\s\S]*?)<\/x:xmpmeta>/i);
                 if (xmpMatch) {
                     const xmpContent = xmpMatch[1];
-                    // Extract common XMP properties
-                    const xmpTitleMatch = xmpContent.match(/<dc:title[^>]*>[\s\S]*?<rdf:li[^>]*>([^<]+)<\/rdf:li>/i);
-                    if (xmpTitleMatch && !properties['Title']) {
-                        properties['Title'] = xmpTitleMatch[1].trim();
+                    
+                    // Extract XMP properties more comprehensively
+                    const xmpProps = {
+                        'Title': /<dc:title[^>]*>[\s\S]*?<rdf:li[^>]*>([^<]+)<\/rdf:li>/i,
+                        'Author': /<dc:creator[^>]*>[\s\S]*?<rdf:li[^>]*>([^<]+)<\/rdf:li>/i,
+                        'Subject': /<dc:description[^>]*>[\s\S]*?<rdf:li[^>]*>([^<]+)<\/rdf:li>/i,
+                        'Keywords': /<pdf:Keywords>([^<]+)<\/pdf:Keywords>/i,
+                        'Creator': /<xmp:CreatorTool>([^<]+)<\/xmp:CreatorTool>/i,
+                        'Producer': /<pdf:Producer>([^<]+)<\/pdf:Producer>/i,
+                        'CreationDate': /<xmp:CreateDate>([^<]+)<\/xmp:CreateDate>/i,
+                        'ModDate': /<xmp:ModifyDate>([^<]+)<\/xmp:ModifyDate>/i
+                    };
+                    
+                    for (const [propName, pattern] of Object.entries(xmpProps)) {
+                        const match = xmpContent.match(pattern);
+                        if (match && match[1] && !properties[propName]) {
+                            properties[propName] = match[1].trim();
+                        }
                     }
-                    const xmpCreatorMatch = xmpContent.match(/<dc:creator[^>]*>[\s\S]*?<rdf:li[^>]*>([^<]+)<\/rdf:li>/i);
-                    if (xmpCreatorMatch && !properties['Author']) {
-                        properties['Author'] = xmpCreatorMatch[1].trim();
+                    
+                    // Extract custom XMP properties (any rdf:Description attributes or custom namespaces)
+                    const customXmpPattern = /<rdf:Description[^>]*([^>]*)>/gi;
+                    let xmpDescMatch;
+                    while ((xmpDescMatch = customXmpPattern.exec(xmpContent)) !== null) {
+                        const attrs = xmpDescMatch[1];
+                        // Extract namespace:property="value" patterns
+                        const attrPattern = /([a-z]+):([a-z]+)="([^"]+)"/gi;
+                        let attrMatch;
+                        while ((attrMatch = attrPattern.exec(attrs)) !== null) {
+                            const ns = attrMatch[1];
+                            const prop = attrMatch[2];
+                            const value = attrMatch[3];
+                            const fullName = `${ns}:${prop}`;
+                            if (value && value.trim() && !properties[fullName]) {
+                                properties[fullName] = value.trim();
+                            }
+                        }
                     }
                 }
                 
