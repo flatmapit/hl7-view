@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="version" content="1.0.10">
+    <meta name="version" content="1.0.11">
     <title>HL7 Document Viewer</title>
     <!-- GitHub Pages deployment -->
     <style>
@@ -839,7 +839,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>HL7 Document Viewer <span style="font-size: 0.6em; font-weight: normal; color: var(--text-secondary);">v<span id="headerVersion">1.0.10</span></span></h1>
+            <h1>HL7 Document Viewer <span style="font-size: 0.6em; font-weight: normal; color: var(--text-secondary);">v<span id="headerVersion">1.0.11</span></span></h1>
             <p>Parse HL7 messages and extract embedded documents (Images, PDFs, Audio, Video, Documents, and more)</p>
             <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">All processing happens locally in your browser - your data never leaves your device</p>
         </header>
@@ -921,7 +921,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             <div class="footer-content">
                 <a href="https://github.com/flatmapit/hl7-view" target="_blank" rel="noopener noreferrer">View on GitHub</a>
                 <a href="https://github.com/flatmapit/hl7-view/releases" target="_blank" rel="noopener noreferrer">Download to use this HTML page locally or offline</a>
-                <span>Version <span id="version">1.0.10</span></span>
+                <span>Version <span id="version">1.0.11</span></span>
                 <span>&copy; 2025 Chris Gentle <a href="https://flatmapit.com" target="_blank" rel="noopener noreferrer">flatmapit.com</a></span>
                 <a href="https://github.com/flatmapit/hl7-view/blob/main/LICENSE?plain=1" target="_blank" rel="noopener noreferrer">MIT License</a>
             </div>
@@ -943,7 +943,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
 
     <script>
         // Application version
-        const APP_VERSION = '1.0.10';
+        const APP_VERSION = '1.0.11';
 
         // Magic number patterns for base64 encoded files
         const MAGIC_NUMBERS = {
@@ -1183,7 +1183,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
 
                 // Validate it looks like base64
                 if (isValidBase64(base64Data)) {
-                    return {
+                    const doc = {
                         segmentIndex: segment.index,
                         type: dataType,
                         encoding: encoding || 'base64',
@@ -1192,6 +1192,18 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                         subId: subId,
                         size: Math.round((base64Data.length * 3) / 4 / 1024) // Approximate KB
                     };
+                    
+                    // Extract document properties (EXIF, metadata, etc.)
+                    try {
+                        const properties = extractDocumentProperties(base64Data, dataType);
+                        if (Object.keys(properties).length > 0) {
+                            doc.properties = properties;
+                        }
+                    } catch (e) {
+                        // Error extracting properties, continue without them
+                    }
+                    
+                    return doc;
                 }
             }
 
@@ -1296,6 +1308,571 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             } catch (e) {
                 return false;
             }
+        }
+
+        function extractDocumentProperties(base64Data, docType) {
+            try {
+                const properties = {};
+                
+                if (docType === 'jpeg' || docType === 'jpg') {
+                    return extractJPEGExif(base64Data);
+                } else if (docType === 'pdf') {
+                    return extractPDFProperties(base64Data);
+                } else if (docType === 'mp3') {
+                    return extractMP3Properties(base64Data);
+                } else if (docType === 'png') {
+                    return extractPNGProperties(base64Data);
+                } else if (docType === 'tiff' || docType === 'tif') {
+                    return extractTIFFProperties(base64Data);
+                }
+                
+                return properties;
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function extractJPEGExif(base64Data) {
+            const properties = {};
+            try {
+                const binary = atob(base64Data);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+
+                // JPEG starts with FF D8 FF
+                if (bytes[0] !== 0xFF || bytes[1] !== 0xD8 || bytes[2] !== 0xFF) {
+                    return properties;
+                }
+
+                let offset = 2;
+                while (offset < bytes.length - 1) {
+                    if (bytes[offset] !== 0xFF) break;
+                    const marker = bytes[offset + 1];
+                    
+                    // APP1 marker (0xE1) contains EXIF
+                    if (marker === 0xE1) {
+                        const exifLength = (bytes[offset + 2] << 8) | bytes[offset + 3];
+                        const exifData = bytes.slice(offset + 4, offset + 4 + exifLength - 2);
+                        
+                        // Check for EXIF header "Exif\0\0"
+                        if (exifData[0] === 0x45 && exifData[1] === 0x78 && 
+                            exifData[2] === 0x69 && exifData[3] === 0x66) {
+                            const exifProps = parseExifData(exifData);
+                            Object.assign(properties, exifProps);
+                        }
+                    }
+                    
+                    // APP0 marker (0xE0) - JFIF
+                    if (marker === 0xE0) {
+                        const jfifLength = (bytes[offset + 2] << 8) | bytes[offset + 3];
+                        if (jfifLength > 5) {
+                            const identifier = String.fromCharCode(
+                                bytes[offset + 4], bytes[offset + 5], bytes[offset + 6],
+                                bytes[offset + 7], bytes[offset + 8]
+                            );
+                            if (identifier === 'JFIF\0') {
+                                if (!properties['Format']) properties['Format'] = 'JFIF';
+                            }
+                        }
+                    }
+                    
+                    if (marker === 0xDA) break; // Start of scan
+                    
+                    const segmentLength = (bytes[offset + 2] << 8) | bytes[offset + 3];
+                    offset += 2 + segmentLength;
+                }
+            } catch (e) {
+                // Error parsing EXIF
+            }
+            return properties;
+        }
+
+        function parseExifData(exifData) {
+            const props = {};
+            try {
+                // Simplified EXIF parsing - look for common tags
+                // This is a basic implementation that extracts some common values
+                const dataView = new DataView(exifData.buffer || new ArrayBuffer(exifData.length));
+                let pos = 6; // Skip "Exif\0\0"
+                
+                // Check byte order (0x4949 = Intel, 0x4D4D = Motorola)
+                const byteOrder = dataView.getUint16(pos, true);
+                pos += 2;
+                
+                // Check TIFF header (should be 0x002A)
+                const tiffHeader = byteOrder === 0x4949 
+                    ? dataView.getUint16(pos, true)
+                    : dataView.getUint16(pos, false);
+                pos += 2;
+                
+                if (tiffHeader !== 0x002A) return props;
+                
+                // Get IFD offset
+                const ifdOffset = byteOrder === 0x4949
+                    ? dataView.getUint32(pos, true)
+                    : dataView.getUint32(pos, false);
+                pos = ifdOffset + 6;
+                
+                // Get number of entries
+                const numEntries = byteOrder === 0x4949
+                    ? dataView.getUint16(pos, true)
+                    : dataView.getUint16(pos, false);
+                pos += 2;
+                
+                // Common EXIF tag IDs
+                const tags = {
+                    0x010E: 'ImageDescription',
+                    0x010F: 'Make',
+                    0x0110: 'Model',
+                    0x0132: 'DateTime',
+                    0x011A: 'XResolution',
+                    0x011B: 'YResolution',
+                    0x0128: 'ResolutionUnit',
+                    0x0131: 'Software',
+                    0x013E: 'WhitePoint',
+                    0x0213: 'YCbCrPositioning',
+                    0x8298: 'Copyright',
+                    0x8769: 'ExifIFD',
+                    0x8825: 'GPSIFD'
+                };
+                
+                for (let i = 0; i < Math.min(numEntries, 20); i++) {
+                    const tagId = byteOrder === 0x4949
+                        ? dataView.getUint16(pos, true)
+                        : dataView.getUint16(pos, false);
+                    pos += 2;
+                    
+                    const tagName = tags[tagId];
+                    if (tagName && tagName !== 'ExifIFD' && tagName !== 'GPSIFD') {
+                        const type = byteOrder === 0x4949
+                            ? dataView.getUint16(pos, true)
+                            : dataView.getUint16(pos, false);
+                        pos += 2;
+                        
+                        const count = byteOrder === 0x4949
+                            ? dataView.getUint32(pos, true)
+                            : dataView.getUint32(pos, false);
+                        pos += 4;
+                        
+                        let value = '';
+                        if (type === 2 && count > 0 && count < 100) { // ASCII string
+                            const valueOffset = byteOrder === 0x4949
+                                ? dataView.getUint32(pos, true)
+                                : dataView.getUint32(pos, false);
+                            const strPos = valueOffset + 6;
+                            if (strPos < exifData.length) {
+                                for (let j = 0; j < count - 1 && strPos + j < exifData.length; j++) {
+                                    const char = exifData[strPos + j];
+                                    if (char >= 32 && char < 127) {
+                                        value += String.fromCharCode(char);
+                                    }
+                                }
+                                if (value) {
+                                    props[tagName] = value.trim();
+                                }
+                            }
+                        }
+                        pos += 4;
+                    } else {
+                        pos += 10; // Skip this entry
+                    }
+                }
+            } catch (e) {
+                // Error parsing
+            }
+            return props;
+        }
+
+        function extractPDFProperties(base64Data) {
+            const properties = {};
+            try {
+                const binary = atob(base64Data.substring(0, Math.min(base64Data.length, 50000)));
+                
+                // Look for PDF metadata in xref and trailer sections
+                const metadataMatch = binary.match(/\/Metadata\s+(\d+)\s+\d+\s+R/);
+                if (metadataMatch) {
+                    // Metadata object reference found
+                    properties['HasMetadata'] = 'Yes';
+                }
+                
+                // Extract common PDF properties from document info
+                const titleMatch = binary.match(/\/Title\s*\(([^)]+)\)/);
+                if (titleMatch) {
+                    properties['Title'] = decodePDFString(titleMatch[1]);
+                }
+                
+                const authorMatch = binary.match(/\/Author\s*\(([^)]+)\)/);
+                if (authorMatch) {
+                    properties['Author'] = decodePDFString(authorMatch[1]);
+                }
+                
+                const subjectMatch = binary.match(/\/Subject\s*\(([^)]+)\)/);
+                if (subjectMatch) {
+                    properties['Subject'] = decodePDFString(subjectMatch[1]);
+                }
+                
+                const creatorMatch = binary.match(/\/Creator\s*\(([^)]+)\)/);
+                if (creatorMatch) {
+                    properties['Creator'] = decodePDFString(creatorMatch[1]);
+                }
+                
+                const producerMatch = binary.match(/\/Producer\s*\(([^)]+)\)/);
+                if (producerMatch) {
+                    properties['Producer'] = decodePDFString(producerMatch[1]);
+                }
+                
+                const creationDateMatch = binary.match(/\/CreationDate\s*\(([^)]+)\)/);
+                if (creationDateMatch) {
+                    properties['CreationDate'] = decodePDFString(creationDateMatch[1]);
+                }
+                
+                const modDateMatch = binary.match(/\/ModDate\s*\(([^)]+)\)/);
+                if (modDateMatch) {
+                    properties['ModDate'] = decodePDFString(modDateMatch[1]);
+                }
+                
+                // Check PDF version
+                const versionMatch = binary.match(/%PDF-(\d\.\d)/);
+                if (versionMatch) {
+                    properties['PDFVersion'] = versionMatch[1];
+                }
+                
+                // Check if encrypted
+                if (binary.includes('/Encrypt')) {
+                    properties['Encrypted'] = 'Yes';
+                }
+            } catch (e) {
+                // Error parsing PDF
+            }
+            return properties;
+        }
+
+        function decodePDFString(str) {
+            try {
+                // Basic PDF string decoding (handles escape sequences)
+                return str.replace(/\\([0-7]{1,3})/g, (match, octal) => {
+                    return String.fromCharCode(parseInt(octal, 8));
+                }).replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t');
+            } catch (e) {
+                return str;
+            }
+        }
+
+        function extractMP3Properties(base64Data) {
+            const properties = {};
+            try {
+                const binary = atob(base64Data);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+
+                // Check for ID3v2 tag (starts with "ID3")
+                if (bytes.length >= 10 && 
+                    bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) {
+                    const version = bytes[3];
+                    const revision = bytes[4];
+                    const flags = bytes[5];
+                    const size = (bytes[6] << 21) | (bytes[7] << 14) | (bytes[8] << 7) | bytes[9];
+                    
+                    properties['ID3Version'] = `2.${version}.${revision}`;
+                    
+                    let pos = 10;
+                    const endPos = Math.min(pos + size, bytes.length);
+                    
+                    while (pos < endPos - 10) {
+                        const frameId = String.fromCharCode(
+                            bytes[pos], bytes[pos + 1], bytes[pos + 2], bytes[pos + 3]
+                        );
+                        pos += 4;
+                        
+                        if (frameId === '\0\0\0\0') break;
+                        
+                        const frameSize = version >= 3
+                            ? (bytes[pos] << 24) | (bytes[pos + 1] << 16) | 
+                              (bytes[pos + 2] << 8) | bytes[pos + 3]
+                            : (bytes[pos] << 21) | (bytes[pos + 1] << 14) | 
+                              (bytes[pos + 2] << 7) | bytes[pos + 3];
+                        pos += 4;
+                        
+                        if (version >= 3) {
+                            pos += 2; // Skip flags
+                        }
+                        
+                        const frameData = bytes.slice(pos, pos + frameSize);
+                        pos += frameSize;
+                        
+                        // Common ID3v2 frame IDs
+                        if (frameId === 'TIT2' || frameId === 'TT2') {
+                            properties['Title'] = decodeID3Text(frameData);
+                        } else if (frameId === 'TPE1' || frameId === 'TP1') {
+                            properties['Artist'] = decodeID3Text(frameData);
+                        } else if (frameId === 'TALB' || frameId === 'TAL') {
+                            properties['Album'] = decodeID3Text(frameData);
+                        } else if (frameId === 'TYER' || frameId === 'TYE' || frameId === 'TDRC') {
+                            properties['Year'] = decodeID3Text(frameData);
+                        } else if (frameId === 'TCON' || frameId === 'TCO') {
+                            properties['Genre'] = decodeID3Text(frameData);
+                        } else if (frameId === 'TRCK' || frameId === 'TRK') {
+                            properties['Track'] = decodeID3Text(frameData);
+                        } else if (frameId === 'TPE2' || frameId === 'TP2') {
+                            properties['AlbumArtist'] = decodeID3Text(frameData);
+                        } else if (frameId === 'TCOM' || frameId === 'TCM') {
+                            properties['Composer'] = decodeID3Text(frameData);
+                        }
+                    }
+                }
+                
+                // Check for ID3v1 tag at the end
+                if (bytes.length >= 128) {
+                    const id3v1Start = bytes.length - 128;
+                    if (bytes[id3v1Start] === 0x54 && bytes[id3v1Start + 1] === 0x41 && 
+                        bytes[id3v1Start + 2] === 0x47) {
+                        if (!properties['Title']) {
+                            properties['Title'] = decodeID3v1String(bytes, id3v1Start + 3, 30);
+                        }
+                        if (!properties['Artist']) {
+                            properties['Artist'] = decodeID3v1String(bytes, id3v1Start + 33, 30);
+                        }
+                        if (!properties['Album']) {
+                            properties['Album'] = decodeID3v1String(bytes, id3v1Start + 63, 30);
+                        }
+                        if (!properties['Year']) {
+                            properties['Year'] = decodeID3v1String(bytes, id3v1Start + 93, 4);
+                        }
+                        if (!properties['Genre']) {
+                            const genreId = bytes[id3v1Start + 127];
+                            if (genreId < 192) {
+                                properties['Genre'] = `ID3v1 Genre ${genreId}`;
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                // Error parsing MP3
+            }
+            return properties;
+        }
+
+        function decodeID3Text(data) {
+            if (data.length === 0) return '';
+            const encoding = data[0];
+            const textData = data.slice(1);
+            let text = '';
+            
+            if (encoding === 0 || encoding === 3) {
+                // ISO-8859-1 or UTF-8
+                for (let i = 0; i < textData.length; i++) {
+                    if (textData[i] === 0) break;
+                    text += String.fromCharCode(textData[i]);
+                }
+            } else if (encoding === 1 || encoding === 2) {
+                // UTF-16 with BOM or UTF-16BE
+                try {
+                    const decoder = new TextDecoder(encoding === 1 ? 'utf-16' : 'utf-16be');
+                    text = decoder.decode(textData.slice(0, textData.indexOf(0) >= 0 ? textData.indexOf(0) : textData.length));
+                } catch (e) {
+                    // Fallback
+                    for (let i = 0; i < textData.length - 1; i += 2) {
+                        if (textData[i] === 0 && textData[i + 1] === 0) break;
+                        text += String.fromCharCode((textData[i] << 8) | textData[i + 1]);
+                    }
+                }
+            }
+            
+            return text.trim();
+        }
+
+        function decodeID3v1String(bytes, start, length) {
+            let str = '';
+            for (let i = 0; i < length; i++) {
+                const byte = bytes[start + i];
+                if (byte === 0) break;
+                str += String.fromCharCode(byte);
+            }
+            return str.trim();
+        }
+
+        function extractPNGProperties(base64Data) {
+            const properties = {};
+            try {
+                const binary = atob(base64Data);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+
+                // PNG starts with 89 50 4E 47 0D 0A 1A 0A
+                if (bytes[0] !== 0x89 || bytes[1] !== 0x50 || bytes[2] !== 0x4E || bytes[3] !== 0x47) {
+                    return properties;
+                }
+
+                let pos = 8; // Skip PNG signature
+                
+                while (pos < bytes.length - 8) {
+                    const chunkLength = (bytes[pos] << 24) | (bytes[pos + 1] << 16) | 
+                                       (bytes[pos + 2] << 8) | bytes[pos + 3];
+                    pos += 4;
+                    
+                    const chunkType = String.fromCharCode(
+                        bytes[pos], bytes[pos + 1], bytes[pos + 2], bytes[pos + 3]
+                    );
+                    pos += 4;
+                    
+                    if (chunkType === 'IHDR') {
+                        const width = (bytes[pos] << 24) | (bytes[pos + 1] << 16) | 
+                                     (bytes[pos + 2] << 8) | bytes[pos + 3];
+                        const height = (bytes[pos + 4] << 24) | (bytes[pos + 5] << 16) | 
+                                      (bytes[pos + 6] << 8) | bytes[pos + 7];
+                        const bitDepth = bytes[pos + 8];
+                        const colorType = bytes[pos + 9];
+                        const compression = bytes[pos + 10];
+                        const filter = bytes[pos + 11];
+                        const interlace = bytes[pos + 12];
+                        
+                        properties['Width'] = width;
+                        properties['Height'] = height;
+                        properties['BitDepth'] = bitDepth;
+                        properties['ColorType'] = colorType;
+                    } else if (chunkType === 'tEXt' || chunkType === 'iTXt' || chunkType === 'zTXt') {
+                        // Text chunk - extract keyword and text
+                        let keywordEnd = pos;
+                        while (keywordEnd < pos + chunkLength && bytes[keywordEnd] !== 0) {
+                            keywordEnd++;
+                        }
+                        const keyword = String.fromCharCode.apply(null, 
+                            Array.from(bytes.slice(pos, keywordEnd)));
+                        const textStart = keywordEnd + (chunkType === 'zTXt' ? 2 : 
+                                                       chunkType === 'iTXt' ? 5 : 1);
+                        const text = String.fromCharCode.apply(null, 
+                            Array.from(bytes.slice(textStart, pos + chunkLength)));
+                        
+                        if (keyword && text) {
+                            properties[keyword] = text;
+                        }
+                    }
+                    
+                    pos += chunkLength + 4; // Skip chunk data and CRC
+                    
+                    if (chunkType === 'IEND') break;
+                }
+            } catch (e) {
+                // Error parsing PNG
+            }
+            return properties;
+        }
+
+        function extractTIFFProperties(base64Data) {
+            const properties = {};
+            try {
+                const binary = atob(base64Data);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+
+                // TIFF starts with II (Intel) or MM (Motorola) followed by 0x002A
+                if (bytes.length < 8) return properties;
+                
+                const byteOrder = bytes[0] === 0x49 && bytes[1] === 0x49 ? 'little' : 'big';
+                const tiffHeader = byteOrder === 'little'
+                    ? (bytes[2] | (bytes[3] << 8))
+                    : ((bytes[2] << 8) | bytes[3]);
+                
+                if (tiffHeader !== 0x002A) return properties;
+                
+                const ifdOffset = byteOrder === 'little'
+                    ? (bytes[4] | (bytes[5] << 8) | (bytes[6] << 16) | (bytes[7] << 24))
+                    : ((bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7]);
+                
+                if (ifdOffset >= bytes.length) return properties;
+                
+                let pos = ifdOffset;
+                const numEntries = byteOrder === 'little'
+                    ? (bytes[pos] | (bytes[pos + 1] << 8))
+                    : ((bytes[pos] << 8) | bytes[pos + 1]);
+                pos += 2;
+                
+                // Common TIFF tags
+                const tags = {
+                    0x0100: 'ImageWidth',
+                    0x0101: 'ImageLength',
+                    0x0102: 'BitsPerSample',
+                    0x0103: 'Compression',
+                    0x0106: 'PhotometricInterpretation',
+                    0x0111: 'StripOffsets',
+                    0x0115: 'SamplesPerPixel',
+                    0x0116: 'RowsPerStrip',
+                    0x0117: 'StripByteCounts',
+                    0x011A: 'XResolution',
+                    0x011B: 'YResolution',
+                    0x011C: 'PlanarConfiguration',
+                    0x0128: 'ResolutionUnit',
+                    0x0131: 'Software',
+                    0x0132: 'DateTime',
+                    0x013E: 'WhitePoint',
+                    0x013F: 'PrimaryChromaticities',
+                    0x0211: 'YCbCrCoefficients',
+                    0x0213: 'YCbCrPositioning',
+                    0x0214: 'ReferenceBlackWhite',
+                    0x8298: 'Copyright'
+                };
+                
+                for (let i = 0; i < Math.min(numEntries, 30); i++) {
+                    const tagId = byteOrder === 'little'
+                        ? (bytes[pos] | (bytes[pos + 1] << 8))
+                        : ((bytes[pos] << 8) | bytes[pos + 1]);
+                    pos += 2;
+                    
+                    const tagName = tags[tagId];
+                    if (tagName) {
+                        const type = byteOrder === 'little'
+                            ? (bytes[pos] | (bytes[pos + 1] << 8))
+                            : ((bytes[pos] << 8) | bytes[pos + 1]);
+                        pos += 2;
+                        
+                        const count = byteOrder === 'little'
+                            ? (bytes[pos] | (bytes[pos + 1] << 8) | (bytes[pos + 2] << 16) | (bytes[pos + 3] << 24))
+                            : ((bytes[pos] << 24) | (bytes[pos + 1] << 16) | (bytes[pos + 2] << 8) | bytes[pos + 3]);
+                        pos += 4;
+                        
+                        if (type === 2 && count > 0 && count < 100) { // ASCII
+                            const valueOffset = byteOrder === 'little'
+                                ? (bytes[pos] | (bytes[pos + 1] << 8) | (bytes[pos + 2] << 16) | (bytes[pos + 3] << 24))
+                                : ((bytes[pos] << 24) | (bytes[pos + 1] << 16) | (bytes[pos + 2] << 8) | bytes[pos + 3]);
+                            
+                            if (valueOffset < bytes.length) {
+                                let value = '';
+                                for (let j = 0; j < count - 1 && valueOffset + j < bytes.length; j++) {
+                                    const char = bytes[valueOffset + j];
+                                    if (char >= 32 && char < 127) {
+                                        value += String.fromCharCode(char);
+                                    }
+                                }
+                                if (value) {
+                                    properties[tagName] = value.trim();
+                                }
+                            }
+                        } else if (type === 3 && count === 1) { // SHORT
+                            const value = byteOrder === 'little'
+                                ? (bytes[pos] | (bytes[pos + 1] << 8))
+                                : ((bytes[pos] << 8) | bytes[pos + 1]);
+                            properties[tagName] = value;
+                        } else if (type === 4 && count === 1) { // LONG
+                            const value = byteOrder === 'little'
+                                ? (bytes[pos] | (bytes[pos + 1] << 8) | (bytes[pos + 2] << 16) | (bytes[pos + 3] << 24))
+                                : ((bytes[pos] << 24) | (bytes[pos + 1] << 16) | (bytes[pos + 2] << 8) | bytes[pos + 3]);
+                            properties[tagName] = value;
+                        }
+                    }
+                    pos += 4;
+                }
+            } catch (e) {
+                // Error parsing TIFF
+            }
+            return properties;
         }
 
         function renderResults() {
@@ -1556,6 +2133,23 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                     `;
                 }
 
+                // Format properties for display (up to 5)
+                let propertiesHtml = '';
+                if (doc.properties && Object.keys(doc.properties).length > 0) {
+                    const props = Object.entries(doc.properties).slice(0, 5);
+                    propertiesHtml = `
+                        <div class="document-properties" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Properties</div>
+                            ${props.map(([key, value]) => `
+                                <div style="font-size: 0.8rem; margin-bottom: 0.4rem; display: flex; justify-content: space-between;">
+                                    <span style="color: var(--text-secondary);">${escapeHtml(key)}:</span>
+                                    <span style="color: var(--text-primary); margin-left: 0.5rem; text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(String(value))}">${escapeHtml(truncate(String(value), 40))}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
                 return `
                     <div class="document-card">
                         <div class="document-preview">
@@ -1568,6 +2162,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                                 <span>Size: ~${doc.size} KB</span>
                                 ${doc.obsIdentifier ? `<span>ID: ${escapeHtml(truncate(doc.obsIdentifier, 30))}</span>` : ''}
                             </div>
+                            ${propertiesHtml}
                             <div class="document-actions">
                                 <button class="btn-secondary" onclick="downloadDocument(${i})">
                                     Download

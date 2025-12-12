@@ -2,7 +2,7 @@
 
 A web application for parsing HL7 messages and extracting embedded documents.
 
-**Version:** 1.0.10  
+**Version:** 1.0.11  
 **🌐 [View Live Site](https://flatmapit.github.io/hl7-view/)**
 
 ## Overview
@@ -35,6 +35,12 @@ This tool parses HL7 messages and extracts embedded documents from OBX segments.
 - Download extracted documents
 - Copy segments and individual fields to clipboard
 - Load sample HL7 message for testing
+- **Extract document properties**: Automatically extracts and displays up to 5 EXIF/metadata properties for supported file types:
+  - **JPEG**: EXIF data (Make, Model, DateTime, Software, Copyright, etc.)
+  - **PDF**: Document metadata (Title, Author, Subject, Creator, Producer, CreationDate, ModDate, PDFVersion)
+  - **MP3**: ID3 tags (Title, Artist, Album, Year, Genre, Track, Composer, etc.)
+  - **PNG**: Image properties (Width, Height, BitDepth, ColorType) and text chunks
+  - **TIFF**: Image properties (ImageWidth, ImageLength, BitsPerSample, DateTime, Software, Copyright, etc.)
 - **Privacy**: All processing happens locally in your browser - your data never leaves your device
 
 ## Technical Details
@@ -53,6 +59,7 @@ Document extraction works by:
 - Extracting base64-encoded data from OBX-5 field
 - Detecting document type from MIME type hints, magic number patterns, or OBX segment identifiers
 - Rendering documents appropriately based on type (images, PDFs, audio/video players, or download options)
+- Extracting document properties (EXIF, metadata, ID3 tags) for supported formats and displaying up to 5 properties per document
 
 ## Dependencies
 
