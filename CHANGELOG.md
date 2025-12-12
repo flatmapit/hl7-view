@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
 - Segments in overlay are now clickable to show/hide field details
 - Improved overlay layout with two-column design (segment list and detail view)
 
+### Documentation
+- Added Dependencies section to README.md documenting that the application has no external dependencies and listing required browser APIs
+
 ## [1.0.9] - 2025-12-XX
 
 ### Added

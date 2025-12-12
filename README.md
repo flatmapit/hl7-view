@@ -54,6 +54,27 @@ Document extraction works by:
 - Detecting document type from MIME type hints, magic number patterns, or OBX segment identifiers
 - Rendering documents appropriately based on type (images, PDFs, audio/video players, or download options)
 
+## Dependencies
+
+This application has **no external dependencies**. It is a standalone HTML file that requires no:
+- JavaScript libraries or frameworks
+- Package manager installations (no npm, pip, etc.)
+- Build tools or compilation steps
+- Server-side components
+
+### Browser API Requirements
+
+The application relies on standard browser APIs that are available in modern browsers:
+- **ES6 JavaScript** - Arrow functions, template literals, const/let, destructuring
+- **Base64 decoding** - `atob()` function for decoding base64-encoded data
+- **Data URLs** - `data:` URLs for displaying embedded content
+- **CSS Grid** - For responsive layout
+- **Clipboard API** - `navigator.clipboard.writeText()` for copy functionality
+- **Blob API** - `Blob` and `URL.createObjectURL()` for file downloads
+- **FileReader API** - For reading file content (if file input is added in future)
+
+All of these APIs are natively supported in modern browsers (Chrome, Firefox, Safari, Edge) released in the last several years.
+
 ## File Structure
 
 ```
