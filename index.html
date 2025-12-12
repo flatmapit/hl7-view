@@ -482,6 +482,117 @@
             color: var(--accent);
         }
 
+        /* Field selection and matching highlights */
+        .field-value {
+            cursor: pointer;
+            padding: 0.1rem 0.2rem;
+            border-radius: 3px;
+            transition: background 0.15s;
+        }
+
+        .field-value:hover {
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        .field-value.selected {
+            background: var(--accent);
+            color: white;
+        }
+
+        .field-value.matching {
+            background: rgba(245, 158, 11, 0.3);
+            border: 1px solid var(--warning);
+        }
+
+        .field-value.selected.matching {
+            background: var(--accent);
+            color: white;
+            border: 1px solid var(--accent);
+        }
+
+        /* Segment list item matching highlight */
+        .segment-item.has-match {
+            background: rgba(245, 158, 11, 0.15);
+            border-left: 3px solid var(--warning);
+        }
+
+        .segment-item.has-match:hover {
+            background: rgba(245, 158, 11, 0.25);
+        }
+
+        .segment-item.active.has-match {
+            background: var(--accent);
+            border-left: 3px solid white;
+        }
+
+        /* Input panel highlighting container */
+        .input-highlight-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .input-highlight-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-primary);
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .input-highlight-backdrop .hl7-match {
+            background: rgba(245, 158, 11, 0.4);
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
+        .input-panel textarea {
+            position: relative;
+            z-index: 2;
+            background: transparent;
+        }
+
+        .input-panel textarea:not(.highlight-active) {
+            background: var(--bg-primary);
+        }
+
+        /* Clear highlight button */
+        .clear-highlight-btn {
+            display: none;
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            z-index: 3;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.75rem;
+            background: var(--warning);
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .clear-highlight-btn:hover {
+            background: #d97706;
+        }
+
+        .clear-highlight-btn.visible {
+            display: block;
+        }
+
         .segment-header {
             display: flex;
             align-items: center;
@@ -735,6 +846,20 @@
             color: white;
         }
 
+        .overlay-segment-item.has-match {
+            background: rgba(245, 158, 11, 0.15);
+            border-left: 3px solid var(--warning);
+        }
+
+        .overlay-segment-item.has-match:hover {
+            background: rgba(245, 158, 11, 0.25);
+        }
+
+        .overlay-segment-item.active.has-match {
+            background: var(--accent);
+            border-left: 3px solid white;
+        }
+
         .overlay-segment-detail {
             background: var(--bg-primary);
             border-radius: 8px;
@@ -850,10 +975,14 @@
                     <span class="panel-title">HL7 Message Input</span>
                 </div>
                 <div class="panel-body">
-                    <textarea id="hl7Input" placeholder="Paste your HL7 message here...
+                    <div class="input-highlight-container">
+                        <div class="input-highlight-backdrop" id="inputHighlightBackdrop"></div>
+                        <textarea id="hl7Input" placeholder="Paste your HL7 message here...
 
 Example OBX segment with embedded document:
 OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textarea>
+                        <button class="clear-highlight-btn" id="clearHighlightBtn" onclick="clearFieldHighlight()">Clear Highlight</button>
+                    </div>
                     <div class="button-group">
                         <button class="btn-primary" onclick="parseHL7()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -988,6 +1117,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
         let parsedSegments = [];
         let extractedDocuments = [];
         let hl7Version = '2.5'; // Default to 2.5 if not specified
+        let selectedFieldValue = null; // Currently selected field value for highlighting
 
         function parseHL7() {
             const input = document.getElementById('hl7Input').value.trim();
@@ -995,6 +1125,9 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 showToast('Please enter an HL7 message', 'error');
                 return;
             }
+
+            // Clear any existing field highlights
+            clearFieldHighlight();
 
             // Parse the message
             const lines = input.split(/\r\n|\r|\n/).filter(line => line.trim());
@@ -2109,8 +2242,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 const isLong = fieldValue.length > fieldLength;
                 const fullField = escapeHtml(fieldValue);
                 const truncatedText = escapeHtml(fieldValue.substring(0, fieldLength) + '...');
-                const fieldClass = isLong ? 'field-content long' : 'field-content';
-                
+
                 // Calculate HL7 field number (1-indexed)
                 // For MSH: fields[0]='MSH', fields[1]=MSH-1, fields[2]=MSH-2, etc.
                 // For other segments: fields[0]=segment type, fields[1]=field-1, fields[2]=field-2, etc.
@@ -2122,15 +2254,38 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                     // Other segments: index 0 is segment type (not a field), index 1 is field-1
                     hl7FieldNumber = i;
                 }
-                
+
                 const fieldName = getFieldName(segment.type, hl7FieldNumber);
                 const fieldNameHtml = fieldName ? `<span class="field-name">${escapeHtml(fieldName)}</span>` : '';
-                
+
+                // Determine if this field should be highlighted
+                const isSelected = selectedFieldValue !== null && fieldValue === selectedFieldValue;
+                const isMatching = selectedFieldValue !== null && fieldValue === selectedFieldValue && fieldValue.length > 0;
+
+                // Build field value classes
+                let fieldValueClasses = 'field-value';
+                if (isSelected) fieldValueClasses += ' selected';
+                if (isMatching) fieldValueClasses += ' matching';
+
+                // For long fields, add the long class
+                const fieldContentClass = isLong ? 'field-content long' : 'field-content';
+
+                // Data attribute for the raw field value (used for highlight matching)
+                const dataFieldValue = fieldValue.replace(/"/g, '&quot;');
+
                 return `
                     <div class="field-item">
                         <span class="field-index">${hl7FieldNumber}:</span>
                         ${fieldNameHtml}
-                        <span class="${fieldClass}" ${isLong ? `data-full="${fullField}" data-truncated="${truncatedText}" onclick="toggleFieldExpand(this)" style="cursor: pointer;" title="Click to expand/collapse"` : ''}>${isLong ? truncatedText : fullField}</span>
+                        <span class="${fieldContentClass}">
+                            <span class="${fieldValueClasses}"
+                                  data-field-value="${dataFieldValue}"
+                                  data-segment-index="${index}"
+                                  data-field-index="${i}"
+                                  onclick="selectFieldForHighlight(this, event)"
+                                  title="Click to highlight matching values${isLong ? ' (click again to expand)' : ''}"
+                                  ${isLong ? `data-full="${fullField}" data-truncated="${truncatedText}"` : ''}>${isLong ? truncatedText : fullField}</span>
+                        </span>
                         <span class="field-copy">
                             <span class="copy-icon" onclick="copyFieldToClipboard(${index}, ${i}, event)" title="Copy field to clipboard">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2207,6 +2362,194 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 element.textContent = element.dataset.full;
             }
         }
+
+        // Field highlight selection functions
+        function selectFieldForHighlight(element, event) {
+            event.stopPropagation();
+
+            const fieldValue = element.dataset.fieldValue;
+            const segmentIndex = parseInt(element.dataset.segmentIndex);
+            const fieldIndex = parseInt(element.dataset.fieldIndex);
+
+            // If this is a long field and user clicks again, toggle expand
+            if (element.dataset.full && element.classList.contains('selected')) {
+                if (element.classList.contains('expanded')) {
+                    element.classList.remove('expanded');
+                    element.textContent = element.dataset.truncated;
+                } else {
+                    element.classList.add('expanded');
+                    element.textContent = element.dataset.full;
+                }
+                return;
+            }
+
+            // Don't highlight empty or very short values (like single characters or separators)
+            if (!fieldValue || fieldValue.length < 2) {
+                showToast('Value too short to highlight', 'error');
+                return;
+            }
+
+            // If clicking the same field, clear the highlight
+            if (selectedFieldValue === fieldValue) {
+                clearFieldHighlight();
+                return;
+            }
+
+            // Set the selected field value
+            selectedFieldValue = fieldValue;
+
+            // Highlight all matching values
+            highlightMatchingValues();
+
+            // Count matches
+            const matchCount = countMatchingFields(fieldValue);
+            if (matchCount > 1) {
+                showToast(`Found ${matchCount} matching fields`, 'success');
+            } else {
+                showToast('No other matching fields found', 'success');
+            }
+        }
+
+        function countMatchingFields(value) {
+            let count = 0;
+            parsedSegments.forEach(segment => {
+                segment.fields.forEach(field => {
+                    if (field === value) {
+                        count++;
+                    }
+                });
+            });
+            return count;
+        }
+
+        function highlightMatchingValues() {
+            if (!selectedFieldValue) return;
+
+            // Highlight in segment list
+            highlightSegmentList();
+
+            // Highlight in currently displayed segment detail
+            highlightSegmentDetail();
+
+            // Highlight in paste box
+            highlightInPasteBox();
+
+            // Show clear button
+            const clearBtn = document.getElementById('clearHighlightBtn');
+            if (clearBtn) {
+                clearBtn.classList.add('visible');
+            }
+        }
+
+        function highlightSegmentList() {
+            // Mark segments that contain the selected value
+            document.querySelectorAll('.segment-item').forEach(item => {
+                const index = parseInt(item.dataset.index);
+                const segment = parsedSegments[index];
+
+                // Check if this segment contains the selected value
+                const hasMatch = segment.fields.some(field => field === selectedFieldValue);
+
+                if (hasMatch) {
+                    item.classList.add('has-match');
+                } else {
+                    item.classList.remove('has-match');
+                }
+            });
+        }
+
+        function highlightSegmentDetail() {
+            // Re-render the current segment detail to update highlighting
+            const activeSegment = document.querySelector('.segment-item.active');
+            if (activeSegment) {
+                const index = parseInt(activeSegment.dataset.index);
+                showSegmentDetail(index);
+            }
+        }
+
+        function highlightInPasteBox() {
+            const textarea = document.getElementById('hl7Input');
+            const backdrop = document.getElementById('inputHighlightBackdrop');
+
+            if (!textarea || !backdrop || !selectedFieldValue) {
+                backdrop.innerHTML = '';
+                textarea.classList.remove('highlight-active');
+                return;
+            }
+
+            const text = textarea.value;
+
+            // Escape special regex characters in the search value
+            const escapedValue = selectedFieldValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+            // Create regex to find all occurrences
+            const regex = new RegExp(escapedValue, 'g');
+
+            // Replace matches with highlighted spans
+            const highlightedHtml = escapeHtml(text).replace(
+                new RegExp(escapeHtml(selectedFieldValue).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+                '<span class="hl7-match">$&</span>'
+            );
+
+            backdrop.innerHTML = highlightedHtml;
+            textarea.classList.add('highlight-active');
+
+            // Sync scroll positions
+            syncTextareaScroll();
+        }
+
+        function syncTextareaScroll() {
+            const textarea = document.getElementById('hl7Input');
+            const backdrop = document.getElementById('inputHighlightBackdrop');
+
+            if (textarea && backdrop) {
+                backdrop.scrollTop = textarea.scrollTop;
+                backdrop.scrollLeft = textarea.scrollLeft;
+            }
+        }
+
+        function clearFieldHighlight() {
+            selectedFieldValue = null;
+
+            // Remove highlighting from segment list
+            document.querySelectorAll('.segment-item.has-match').forEach(item => {
+                item.classList.remove('has-match');
+            });
+
+            // Re-render segment detail to remove highlighting
+            highlightSegmentDetail();
+
+            // Clear paste box highlighting
+            const textarea = document.getElementById('hl7Input');
+            const backdrop = document.getElementById('inputHighlightBackdrop');
+
+            if (backdrop) {
+                backdrop.innerHTML = '';
+            }
+            if (textarea) {
+                textarea.classList.remove('highlight-active');
+            }
+
+            // Hide clear button
+            const clearBtn = document.getElementById('clearHighlightBtn');
+            if (clearBtn) {
+                clearBtn.classList.remove('visible');
+            }
+        }
+
+        // Sync scroll on textarea scroll
+        document.addEventListener('DOMContentLoaded', () => {
+            const textarea = document.getElementById('hl7Input');
+            if (textarea) {
+                textarea.addEventListener('scroll', syncTextareaScroll);
+                textarea.addEventListener('input', () => {
+                    // Clear highlights when text changes
+                    if (selectedFieldValue) {
+                        clearFieldHighlight();
+                    }
+                });
+            }
+        });
 
         function renderDocuments() {
             const section = document.getElementById('documentsSection');
@@ -2600,6 +2943,9 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
         }
 
         function clearAll() {
+            // Clear field highlights first
+            clearFieldHighlight();
+
             document.getElementById('hl7Input').value = '';
             parsedSegments = [];
             extractedDocuments = [];
@@ -2700,8 +3046,7 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
                 const isLong = fieldValue.length > fieldLength;
                 const fullField = escapeHtml(fieldValue);
                 const truncatedText = escapeHtml(fieldValue.substring(0, fieldLength) + '...');
-                const fieldClass = isLong ? 'field-content long' : 'field-content';
-                
+
                 // Calculate HL7 field number (1-indexed)
                 let hl7FieldNumber;
                 if (segment.type === 'MSH') {
@@ -2709,15 +3054,38 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
                 } else {
                     hl7FieldNumber = i;
                 }
-                
+
                 const fieldName = getFieldName(segment.type, hl7FieldNumber);
                 const fieldNameHtml = fieldName ? `<span class="field-name">${escapeHtml(fieldName)}</span>` : '';
-                
+
+                // Determine if this field should be highlighted
+                const isSelected = selectedFieldValue !== null && fieldValue === selectedFieldValue;
+                const isMatching = selectedFieldValue !== null && fieldValue === selectedFieldValue && fieldValue.length > 0;
+
+                // Build field value classes
+                let fieldValueClasses = 'field-value';
+                if (isSelected) fieldValueClasses += ' selected';
+                if (isMatching) fieldValueClasses += ' matching';
+
+                // For long fields, add the long class
+                const fieldContentClass = isLong ? 'field-content long' : 'field-content';
+
+                // Data attribute for the raw field value (used for highlight matching)
+                const dataFieldValue = fieldValue.replace(/"/g, '&quot;');
+
                 return `
                     <div class="field-item">
                         <span class="field-index">${hl7FieldNumber}:</span>
                         ${fieldNameHtml}
-                        <span class="${fieldClass}" ${isLong ? `data-full="${fullField}" data-truncated="${truncatedText}" onclick="toggleFieldExpand(this)" style="cursor: pointer;" title="Click to expand/collapse"` : ''}>${isLong ? truncatedText : fullField}</span>
+                        <span class="${fieldContentClass}">
+                            <span class="${fieldValueClasses}"
+                                  data-field-value="${dataFieldValue}"
+                                  data-segment-index="${index}"
+                                  data-field-index="${i}"
+                                  onclick="selectFieldForHighlightOverlay(this, event)"
+                                  title="Click to highlight matching values${isLong ? ' (click again to expand)' : ''}"
+                                  ${isLong ? `data-full="${fullField}" data-truncated="${truncatedText}"` : ''}>${isLong ? truncatedText : fullField}</span>
+                        </span>
                         <span class="field-copy">
                             <span class="copy-icon" onclick="copyFieldToClipboard(${index}, ${i}, event)" title="Copy field to clipboard">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2732,6 +3100,109 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
 
             detailDiv.innerHTML = segmentHeader + fieldsHtml;
             detailDiv.style.display = 'block';
+        }
+
+        // Overlay version of field highlight selection
+        function selectFieldForHighlightOverlay(element, event) {
+            event.stopPropagation();
+
+            const fieldValue = element.dataset.fieldValue;
+
+            // If this is a long field and user clicks again, toggle expand
+            if (element.dataset.full && element.classList.contains('selected')) {
+                if (element.classList.contains('expanded')) {
+                    element.classList.remove('expanded');
+                    element.textContent = element.dataset.truncated;
+                } else {
+                    element.classList.add('expanded');
+                    element.textContent = element.dataset.full;
+                }
+                return;
+            }
+
+            // Don't highlight empty or very short values
+            if (!fieldValue || fieldValue.length < 2) {
+                showToast('Value too short to highlight', 'error');
+                return;
+            }
+
+            // If clicking the same field, clear the highlight
+            if (selectedFieldValue === fieldValue) {
+                clearFieldHighlightOverlay();
+                return;
+            }
+
+            // Set the selected field value
+            selectedFieldValue = fieldValue;
+
+            // Highlight all matching values in overlay
+            highlightOverlaySegmentList();
+            highlightOverlaySegmentDetail();
+            highlightInPasteBox();
+
+            // Show clear button in main view too
+            const clearBtn = document.getElementById('clearHighlightBtn');
+            if (clearBtn) {
+                clearBtn.classList.add('visible');
+            }
+
+            // Count matches
+            const matchCount = countMatchingFields(fieldValue);
+            if (matchCount > 1) {
+                showToast(`Found ${matchCount} matching fields`, 'success');
+            } else {
+                showToast('No other matching fields found', 'success');
+            }
+        }
+
+        function highlightOverlaySegmentList() {
+            // Mark segments that contain the selected value in overlay
+            document.querySelectorAll('.overlay-segment-item').forEach(item => {
+                const index = parseInt(item.dataset.index);
+                const segment = parsedSegments[index];
+
+                const hasMatch = segment.fields.some(field => field === selectedFieldValue);
+
+                if (hasMatch) {
+                    item.classList.add('has-match');
+                } else {
+                    item.classList.remove('has-match');
+                }
+            });
+        }
+
+        function highlightOverlaySegmentDetail() {
+            const activeSegment = document.querySelector('.overlay-segment-item.active');
+            if (activeSegment) {
+                const index = parseInt(activeSegment.dataset.index);
+                showOverlaySegmentDetail(index);
+            }
+        }
+
+        function clearFieldHighlightOverlay() {
+            selectedFieldValue = null;
+
+            // Remove highlighting from overlay segment list
+            document.querySelectorAll('.overlay-segment-item.has-match').forEach(item => {
+                item.classList.remove('has-match');
+            });
+
+            // Re-render overlay segment detail
+            highlightOverlaySegmentDetail();
+
+            // Also clear main view and paste box
+            document.querySelectorAll('.segment-item.has-match').forEach(item => {
+                item.classList.remove('has-match');
+            });
+            highlightSegmentDetail();
+
+            const textarea = document.getElementById('hl7Input');
+            const backdrop = document.getElementById('inputHighlightBackdrop');
+            if (backdrop) backdrop.innerHTML = '';
+            if (textarea) textarea.classList.remove('highlight-active');
+
+            const clearBtn = document.getElementById('clearHighlightBtn');
+            if (clearBtn) clearBtn.classList.remove('visible');
         }
 
         function closeResultsOverlay() {
