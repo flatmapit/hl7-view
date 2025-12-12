@@ -1,0 +1,90 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.16)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Read version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=$(cat VERSION | tr -d '[:space:]')
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
+      
+      - name: Create release archive
+        run: |
+          ARCHIVE_NAME="hl7-view-${{ steps.version.outputs.version }}.zip"
+          zip -r "$ARCHIVE_NAME" \
+            index.html \
+            README.md \
+            LICENSE \
+            VERSION \
+            CHANGELOG.md \
+            -x "*.git*" "*.github*"
+          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
+      
+      - name: Read changelog
+        id: changelog
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            # Extract changelog entry for this version
+            VERSION="${{ steps.version.outputs.version }}"
+            # Try to extract the changelog section for this version
+            awk "/^## \[$VERSION\]/,/^## \[/" CHANGELOG.md | head -n -1 > /tmp/changelog.txt || true
+            if [ -s /tmp/changelog.txt ]; then
+              CHANGELOG=$(cat /tmp/changelog.txt)
+            else
+              CHANGELOG="See [CHANGELOG.md](CHANGELOG.md) for details."
+            fi
+          else
+            CHANGELOG="See [CHANGELOG.md](CHANGELOG.md) for details."
+          fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.version }}
+          body: |
+            ## Version ${{ steps.version.outputs.version }}
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### Download
+            Download the `hl7-view-${{ steps.version.outputs.version }}.zip` file below to get the complete application.
+            
+            ### Usage
+            1. Extract the zip file
+            2. Open `index.html` in your web browser
+            3. No installation or dependencies required!
+          files: ${{ env.ARCHIVE_NAME }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
