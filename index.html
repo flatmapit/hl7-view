@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="version" content="1.0.16">
+    <meta name="version" content="1.0.17">
     <title>HL7 Document Viewer</title>
     <!-- GitHub Pages deployment -->
     <style>
@@ -690,6 +690,112 @@
             text-overflow: clip;
         }
 
+        .field-value.has-components {
+            border-left: 2px solid var(--accent);
+            padding-left: 0.3rem;
+        }
+
+        .components-expanded {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            padding-left: 1rem;
+            border-left: 2px solid var(--accent);
+        }
+
+        .component-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.3rem;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 4px;
+        }
+
+        .component-index {
+            color: var(--accent);
+            font-weight: 600;
+            min-width: 60px;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .component-name {
+            color: var(--text-secondary);
+            font-style: italic;
+            min-width: 150px;
+            max-width: 200px;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .component-value {
+            flex: 1;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            font-size: 0.875rem;
+        }
+
+        .repeat-item {
+            margin-bottom: 0.75rem;
+            padding-left: 0.5rem;
+            border-left: 2px solid var(--warning);
+        }
+
+        .repeat-header {
+            margin-bottom: 0.5rem;
+        }
+
+        .repeat-label {
+            color: var(--warning);
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .repeat-content {
+            padding-left: 1rem;
+        }
+
+        .repeat-value {
+            word-break: break-word;
+            overflow-wrap: break-word;
+            font-size: 0.875rem;
+        }
+
+        .subcomponents-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            margin-top: 0.3rem;
+            padding-left: 1rem;
+            border-left: 2px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .subcomponent-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.2rem;
+            background: rgba(59, 130, 246, 0.05);
+            border-radius: 3px;
+        }
+
+        .subcomponent-index {
+            color: var(--text-secondary);
+            font-weight: 500;
+            min-width: 80px;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+
+        .subcomponent-value {
+            flex: 1;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            font-size: 0.8rem;
+        }
+
         .field-copy {
             flex-shrink: 0;
         }
@@ -966,7 +1072,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>HL7 Document Viewer <span style="font-size: 0.6em; font-weight: normal; color: var(--text-secondary);">v<span id="headerVersion">1.0.16</span></span></h1>
+            <h1>HL7 Document Viewer <span style="font-size: 0.6em; font-weight: normal; color: var(--text-secondary);">v<span id="headerVersion">1.0.17</span></span></h1>
             <p>Parse HL7 messages and extract embedded documents (Images, PDFs, Audio, Video, Documents, and more)</p>
             <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">All processing happens locally in your browser - your data never leaves your device</p>
         </header>
@@ -1052,7 +1158,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             <div class="footer-content">
                 <a href="https://github.com/flatmapit/hl7-view" target="_blank" rel="noopener noreferrer">View on GitHub</a>
                 <a href="https://github.com/flatmapit/hl7-view/releases" target="_blank" rel="noopener noreferrer">Download to use this HTML page locally or offline</a>
-                <span>Version <span id="version">1.0.16</span></span>
+                <span>Version <span id="version">1.0.17</span></span>
                 <span>&copy; 2025 Chris Gentle <a href="https://flatmapit.com" target="_blank" rel="noopener noreferrer">flatmapit.com</a></span>
                 <a href="https://github.com/flatmapit/hl7-view/blob/main/LICENSE?plain=1" target="_blank" rel="noopener noreferrer">MIT License</a>
             </div>
@@ -1074,7 +1180,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
 
     <script>
         // Application version
-        const APP_VERSION = '1.0.16';
+        const APP_VERSION = '1.0.17';
 
         // Magic number patterns for base64 encoded files
         const MAGIC_NUMBERS = {
@@ -2213,6 +2319,150 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             return null;
         }
 
+        // Component name mappings for common HL7 fields based on HL7 v2.5 standard
+        // Format: segmentType.fieldNumber: [component1, component2, ...]
+        // Uses standard HL7 short component names
+        const HL7_COMPONENT_NAMES = {
+            // CE/CWE data type (Coded Element / Coded With Exceptions) - 6 components
+            'OBX.3': ['ID', 'Text', 'Name of Coding System', 'Alternate ID', 'Alternate Text', 'Name of Alternate Coding System'],
+            'OBR.4': ['ID', 'Text', 'Name of Coding System', 'Alternate ID', 'Alternate Text', 'Name of Alternate Coding System'],
+            'OBR.31': ['ID', 'Text', 'Name of Coding System', 'Alternate ID', 'Alternate Text', 'Name of Alternate Coding System'],
+            'DG1.3': ['ID', 'Text', 'Name of Coding System', 'Alternate ID', 'Alternate Text', 'Name of Alternate Coding System'],
+            'PR1.3': ['ID', 'Text', 'Name of Coding System', 'Alternate ID', 'Alternate Text', 'Name of Alternate Coding System'],
+            'AL1.3': ['ID', 'Text', 'Name of Coding System', 'Alternate ID', 'Alternate Text', 'Name of Alternate Coding System'],
+            
+            // ED data type (Encapsulated Data) - 5 components
+            'OBX.5': ['Source Application', 'Type of Data', 'Data Subtype', 'Encoding', 'Data'],
+            
+            // CX data type (Extended Composite ID) - 12 components
+            'PID.3': ['ID Number', 'Check Digit', 'Check Digit Scheme', 'Assigning Authority', 'ID Type Code', 'Assigning Facility', 'Effective Date', 'Expiration Date', 'Assigning Jurisdiction', 'Assigning Agency', 'Security Check', 'Security Check Scheme'],
+            'PID.4': ['ID Number', 'Check Digit', 'Check Digit Scheme', 'Assigning Authority', 'ID Type Code', 'Assigning Facility', 'Effective Date', 'Expiration Date', 'Assigning Jurisdiction', 'Assigning Agency', 'Security Check', 'Security Check Scheme'],
+            'PID.18': ['ID Number', 'Check Digit', 'Check Digit Scheme', 'Assigning Authority', 'ID Type Code', 'Assigning Facility', 'Effective Date', 'Expiration Date', 'Assigning Jurisdiction', 'Assigning Agency', 'Security Check', 'Security Check Scheme'],
+            'PID.19': ['ID Number', 'Check Digit', 'Check Digit Scheme', 'Assigning Authority', 'ID Type Code', 'Assigning Facility', 'Effective Date', 'Expiration Date', 'Assigning Jurisdiction', 'Assigning Agency', 'Security Check', 'Security Check Scheme'],
+            
+            // XCN data type (Extended Composite ID Number and Name for Persons) - 20 components
+            'PID.5': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
+            'PV1.7': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
+            'PV1.8': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
+            'PV1.9': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
+            'PV1.17': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
+            'ORC.12': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
+            'OBR.16': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
+            'OBR.32': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
+            'OBR.33': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
+            'OBR.34': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
+            'OBR.35': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
+            
+            // XAD data type (Extended Address) - 14 components
+            'PID.11': ['Street Address', 'Other Designation', 'City', 'State or Province', 'Zip or Postal Code', 'Country', 'Address Type', 'Other Geographic', 'County/Parish Code', 'Census Tract', 'Address Representation', 'Address Validity Range', 'Effective Date', 'Expiration Date'],
+            'PV1.3': ['Street Address', 'Other Designation', 'City', 'State or Province', 'Zip or Postal Code', 'Country', 'Address Type', 'Other Geographic', 'County/Parish Code', 'Census Tract', 'Address Representation', 'Address Validity Range', 'Effective Date', 'Expiration Date'],
+            
+            // XTN data type (Extended Telecommunication Number) - 19 components
+            'PID.13': ['Telephone Number', 'Telecommunication Use Code', 'Telecommunication Equipment Type', 'Email Address', 'Country Code', 'Area/City Code', 'Phone Number', 'Extension', 'Any Text', 'Extension Prefix', 'Speed Dial Code', 'Unformatted Phone Number', 'Effective Start Date', 'Expiration Date', 'Expiration Reason', 'Protection Code', 'Shared Telecommunication Identifier', 'Preference Order'],
+            'PID.14': ['Telephone Number', 'Telecommunication Use Code', 'Telecommunication Equipment Type', 'Email Address', 'Country Code', 'Area/City Code', 'Phone Number', 'Extension', 'Any Text', 'Extension Prefix', 'Speed Dial Code', 'Unformatted Phone Number', 'Effective Start Date', 'Expiration Date', 'Expiration Reason', 'Protection Code', 'Shared Telecommunication Identifier', 'Preference Order'],
+            'ORC.14': ['Telephone Number', 'Telecommunication Use Code', 'Telecommunication Equipment Type', 'Email Address', 'Country Code', 'Area/City Code', 'Phone Number', 'Extension', 'Any Text', 'Extension Prefix', 'Speed Dial Code', 'Unformatted Phone Number', 'Effective Start Date', 'Expiration Date', 'Expiration Reason', 'Protection Code', 'Shared Telecommunication Identifier', 'Preference Order'],
+            
+            // MSH fields
+            'MSH.3': ['Namespace ID', 'Universal ID', 'Universal ID Type'],
+            'MSH.4': ['Namespace ID', 'Universal ID', 'Universal ID Type'],
+            'MSH.5': ['Namespace ID', 'Universal ID', 'Universal ID Type'],
+            'MSH.6': ['Namespace ID', 'Universal ID', 'Universal ID Type'],
+            'MSH.9': ['Message Type', 'Trigger Event', 'Message Structure'],
+            'MSH.10': ['Entity Identifier', 'Namespace ID', 'Universal ID', 'Universal ID Type'],
+            
+            // OBR fields
+            'OBR.2': ['Entity Identifier', 'Namespace ID', 'Universal ID', 'Universal ID Type'],
+            'OBR.3': ['Entity Identifier', 'Namespace ID', 'Universal ID', 'Universal ID Type'],
+            'OBR.26': ['Entity Identifier', 'Namespace ID', 'Universal ID', 'Universal ID Type'],
+            
+            // ORC fields
+            'ORC.2': ['Entity Identifier', 'Namespace ID', 'Universal ID', 'Universal ID Type'],
+            'ORC.3': ['Entity Identifier', 'Namespace ID', 'Universal ID', 'Universal ID Type'],
+            'ORC.4': ['Entity Identifier', 'Namespace ID', 'Universal ID', 'Universal ID Type'],
+        };
+
+        function getComponentName(segmentType, hl7FieldNumber, componentNumber) {
+            const key = `${segmentType}.${hl7FieldNumber}`;
+            const componentNames = HL7_COMPONENT_NAMES[key];
+            if (componentNames && componentNames[componentNumber - 1]) {
+                return componentNames[componentNumber - 1];
+            }
+            // Default generic description
+            return `Component ${componentNumber}`;
+        }
+
+        // Parse field value into hierarchical structure: repeats -> components -> subcomponents
+        function parseFieldValue(fieldValue, fieldSep, componentSep, subcomponentSep, repetitionSep) {
+            if (!fieldValue || !fieldValue.includes(repetitionSep) && !fieldValue.includes(componentSep) && !fieldValue.includes(subcomponentSep)) {
+                return null;
+            }
+
+            const result = {
+                hasRepeats: fieldValue.includes(repetitionSep),
+                hasComponents: fieldValue.includes(componentSep),
+                hasSubcomponents: fieldValue.includes(subcomponentSep),
+                repeats: []
+            };
+
+            // First split by repetition separator
+            const repeats = fieldValue.split(repetitionSep);
+            
+            repeats.forEach((repeat, repeatIdx) => {
+                const repeatObj = {
+                    number: repeatIdx + 1,
+                    components: []
+                };
+
+                // Split each repeat by component separator
+                const components = repeat.split(componentSep);
+                
+                components.forEach((component, compIdx) => {
+                    const componentObj = {
+                        number: compIdx + 1,
+                        subcomponents: []
+                    };
+
+                    // Split each component by subcomponent separator
+                    const subcomponents = component.split(subcomponentSep);
+                    
+                    subcomponents.forEach((subcomponent, subIdx) => {
+                        componentObj.subcomponents.push({
+                            number: subIdx + 1,
+                            value: subcomponent
+                        });
+                    });
+
+                    // If only one subcomponent, store it as the component value
+                    if (componentObj.subcomponents.length === 1) {
+                        componentObj.value = componentObj.subcomponents[0].value;
+                        componentObj.subcomponents = [];
+                    }
+
+                    repeatObj.components.push(componentObj);
+                });
+
+                // If only one component, store it as the repeat value
+                if (repeatObj.components.length === 1 && !repeatObj.components[0].subcomponents.length) {
+                    repeatObj.value = repeatObj.components[0].value;
+                    repeatObj.components = [];
+                }
+
+                result.repeats.push(repeatObj);
+            });
+
+            // If only one repeat, flatten structure
+            if (result.repeats.length === 1 && !result.repeats[0].components.length) {
+                return {
+                    hasRepeats: false,
+                    hasComponents: false,
+                    hasSubcomponents: false,
+                    value: result.repeats[0].value
+                };
+            }
+
+            return result;
+        }
+
         function showSegmentDetail(index) {
             const segment = parsedSegments[index];
             const detailDiv = document.getElementById('segmentDetail');
@@ -2239,6 +2489,29 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
 
             // Format all fields with copy icons
             const fieldLength = 150; // Characters before ellipsis
+            // Get all separators from MSH segment (same logic as parseHL7)
+            let fieldSep = DEFAULT_FIELD_SEP;
+            let componentSep = DEFAULT_COMPONENT_SEP;
+            let subcomponentSep = DEFAULT_SUBCOMPONENT_SEP;
+            let repetitionSep = DEFAULT_REPETITION_SEP;
+            
+            const mshSegment = parsedSegments.find(s => s.type === 'MSH');
+            if (mshSegment && mshSegment.raw) {
+                const mshLine = mshSegment.raw;
+                if (mshLine.length > 3) {
+                    fieldSep = mshLine[3];
+                }
+                if (mshLine.length > 4) {
+                    componentSep = mshLine[4];
+                }
+                if (mshLine.length > 5) {
+                    repetitionSep = mshLine[5];
+                }
+                if (mshLine.length > 6) {
+                    subcomponentSep = mshLine[6];
+                }
+            }
+            
             const fieldsHtml = segment.fields.map((field, i) => {
                 const fieldValue = field || '';
                 const isLong = fieldValue.length > fieldLength;
@@ -2260,6 +2533,20 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 const fieldName = getFieldName(segment.type, hl7FieldNumber);
                 const fieldNameHtml = fieldName ? `<span class="field-name">${escapeHtml(fieldName)}</span>` : '';
 
+                // Parse field value for repeats, components, and subcomponents
+                const parsedField = parseFieldValue(fieldValue, fieldSep, componentSep, subcomponentSep, repetitionSep);
+                const hasComplexStructure = parsedField && (parsedField.hasRepeats || parsedField.hasComponents || parsedField.hasSubcomponents);
+                const componentsData = hasComplexStructure ? JSON.stringify({
+                    structure: parsedField,
+                    separators: {
+                        component: componentSep,
+                        subcomponent: subcomponentSep,
+                        repetition: repetitionSep
+                    },
+                    segmentType: segment.type,
+                    fieldNumber: hl7FieldNumber
+                }) : '';
+
                 // Determine if this field should be highlighted
                 const isSelected = selectedFieldValue !== null && fieldValue === selectedFieldValue;
                 const isMatching = selectedFieldValue !== null && fieldValue === selectedFieldValue && fieldValue.length > 0;
@@ -2268,15 +2555,29 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 let fieldValueClasses = 'field-value';
                 if (isSelected) fieldValueClasses += ' selected';
                 if (isMatching) fieldValueClasses += ' matching';
+                if (hasComplexStructure) fieldValueClasses += ' has-components';
 
                 // For long fields, add the long class
                 const fieldContentClass = isLong ? 'field-content long' : 'field-content';
 
                 // Data attribute for the raw field value (used for highlight matching)
                 const dataFieldValue = fieldValue.replace(/"/g, '&quot;');
+                const escapedComponentsData = componentsData.replace(/"/g, '&quot;');
+
+                // Build title text
+                let titleText = 'Click to highlight matching values';
+                if (hasComplexStructure) {
+                    let structureDesc = [];
+                    if (parsedField.hasRepeats) structureDesc.push('repeats');
+                    if (parsedField.hasComponents) structureDesc.push('components');
+                    if (parsedField.hasSubcomponents) structureDesc.push('subcomponents');
+                    titleText += ` (click again to expand ${structureDesc.join(', ')})`;
+                } else if (isLong) {
+                    titleText += ' (click again to expand)';
+                }
 
                 return `
-                    <div class="field-item">
+                    <div class="field-item" data-has-components="${hasComplexStructure}">
                         <span class="field-index">${hl7FieldNumber}:</span>
                         ${fieldNameHtml}
                         <span class="${fieldContentClass}">
@@ -2284,8 +2585,14 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                                   data-field-value="${dataFieldValue}"
                                   data-segment-index="${index}"
                                   data-field-index="${i}"
+                                  data-hl7-field-number="${hl7FieldNumber}"
+                                  data-segment-type="${segment.type}"
+                                  data-component-sep="${escapeHtml(componentSep)}"
+                                  data-subcomponent-sep="${escapeHtml(subcomponentSep)}"
+                                  data-repetition-sep="${escapeHtml(repetitionSep)}"
+                                  ${hasComplexStructure ? `data-components="${escapedComponentsData}"` : ''}
                                   onclick="selectFieldForHighlight(this, event)"
-                                  title="Click to highlight matching values${isLong ? ' (click again to expand)' : ''}"
+                                  title="${titleText}"
                                   ${isLong ? `data-full="${fullField}" data-truncated="${truncatedText}"` : ''}>${isLong ? truncatedText : fullField}</span>
                         </span>
                         <span class="field-copy">
@@ -2365,6 +2672,117 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             }
         }
 
+        function expandComponents(element) {
+            if (!element.dataset.components) return;
+
+            try {
+                const data = JSON.parse(element.dataset.components);
+                const structure = data.structure;
+                const hl7FieldNumber = data.fieldNumber || parseInt(element.dataset.hl7FieldNumber);
+                const segmentType = data.segmentType || element.dataset.segmentType;
+                
+                // Get original value from dataset.fieldValue (the raw field value)
+                const originalValue = element.dataset.fieldValue || element.textContent;
+                
+                // Store original value for collapse
+                element.dataset.originalValue = originalValue;
+                
+                // Build hierarchical HTML
+                let html = '<div class="components-expanded">';
+                
+                if (structure.hasRepeats) {
+                    // Display repeats
+                    structure.repeats.forEach((repeat, repeatIdx) => {
+                        html += `<div class="repeat-item">`;
+                        html += `<div class="repeat-header"><span class="repeat-label">Repeat ${repeat.number}:</span></div>`;
+                        html += `<div class="repeat-content">`;
+                        
+                        if (repeat.components && repeat.components.length > 0) {
+                            repeat.components.forEach((component) => {
+                                const componentName = getComponentName(segmentType, hl7FieldNumber, component.number);
+                                html += `<div class="component-item">`;
+                                html += `<span class="component-index">${hl7FieldNumber}.${component.number}:</span>`;
+                                html += `<span class="component-name">${escapeHtml(componentName)}</span>`;
+                                
+                                if (component.subcomponents && component.subcomponents.length > 0) {
+                                    html += `<div class="subcomponents-list">`;
+                                    component.subcomponents.forEach((subcomp) => {
+                                        html += `<div class="subcomponent-item">`;
+                                        html += `<span class="subcomponent-index">${hl7FieldNumber}.${component.number}.${subcomp.number}:</span>`;
+                                        html += `<span class="subcomponent-value">${escapeHtml(subcomp.value || '')}</span>`;
+                                        html += `</div>`;
+                                    });
+                                    html += `</div>`;
+                                } else {
+                                    html += `<span class="component-value">${escapeHtml(component.value || '')}</span>`;
+                                }
+                                html += `</div>`;
+                            });
+                        } else {
+                            html += `<span class="repeat-value">${escapeHtml(repeat.value || '')}</span>`;
+                        }
+                        
+                        html += `</div></div>`;
+                    });
+                } else if (structure.hasComponents) {
+                    // Display components (no repeats)
+                    structure.repeats[0].components.forEach((component) => {
+                        const componentName = getComponentName(segmentType, hl7FieldNumber, component.number);
+                        html += `<div class="component-item">`;
+                        html += `<span class="component-index">${hl7FieldNumber}.${component.number}:</span>`;
+                        html += `<span class="component-name">${escapeHtml(componentName)}</span>`;
+                        
+                        if (component.subcomponents && component.subcomponents.length > 0) {
+                            html += `<div class="subcomponents-list">`;
+                            component.subcomponents.forEach((subcomp) => {
+                                html += `<div class="subcomponent-item">`;
+                                html += `<span class="subcomponent-index">${hl7FieldNumber}.${component.number}.${subcomp.number}:</span>`;
+                                html += `<span class="subcomponent-value">${escapeHtml(subcomp.value || '')}</span>`;
+                                html += `</div>`;
+                            });
+                            html += `</div>`;
+                        } else {
+                            html += `<span class="component-value">${escapeHtml(component.value || '')}</span>`;
+                        }
+                        html += `</div>`;
+                    });
+                }
+                
+                html += '</div>';
+                
+                // Replace content with hierarchical structure
+                element.innerHTML = html;
+                element.classList.add('components-expanded');
+            } catch (e) {
+                console.error('Error expanding components:', e);
+            }
+        }
+
+        function collapseComponents(element) {
+            // Get original value from dataset or from parsed segments
+            let originalValue = element.dataset.originalValue;
+            if (!originalValue) {
+                // Fallback: get from dataset.fieldValue
+                originalValue = element.dataset.fieldValue;
+            }
+            if (!originalValue) {
+                // Last resort: get from parsed segments
+                const segmentIndex = parseInt(element.dataset.segmentIndex);
+                const fieldIndex = parseInt(element.dataset.fieldIndex);
+                if (segmentIndex !== undefined && fieldIndex !== undefined && parsedSegments[segmentIndex]) {
+                    originalValue = parsedSegments[segmentIndex].fields[fieldIndex] || '';
+                }
+            }
+            if (originalValue) {
+                element.textContent = escapeHtml(originalValue);
+                element.classList.remove('components-expanded');
+                delete element.dataset.originalValue;
+            }
+        }
+
+        // Track which fields have expanded components (by segment index and field index)
+        let expandedComponents = new Set();
+
         // Field highlight selection functions
         function selectFieldForHighlight(element, event) {
             event.stopPropagation();
@@ -2372,6 +2790,40 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             const fieldValue = element.dataset.fieldValue;
             const segmentIndex = parseInt(element.dataset.segmentIndex);
             const fieldIndex = parseInt(element.dataset.fieldIndex);
+            const componentKey = `${segmentIndex}-${fieldIndex}`;
+
+            // Check if field has components - handle component expansion
+            if (element.dataset.components) {
+                // If already selected and expanded, collapse
+                if (element.classList.contains('selected') && expandedComponents.has(componentKey)) {
+                    collapseComponents(element);
+                    expandedComponents.delete(componentKey);
+                    return;
+                }
+                // If already selected but not expanded, expand
+                if (element.classList.contains('selected')) {
+                    expandComponents(element);
+                    expandedComponents.add(componentKey);
+                    return;
+                }
+                // If not selected yet, select it and expand components
+                if (fieldValue && fieldValue.length >= 2) {
+                    // Set the selected field value for highlighting
+                    selectedFieldValue = fieldValue;
+                    // Mark this field for component expansion after re-render
+                    expandedComponents.add(componentKey);
+                    // Highlight all matching values (this will re-render)
+                    highlightMatchingValues();
+                    // After re-render, expand the components
+                    setTimeout(() => {
+                        const newElement = document.querySelector(`[data-segment-index="${segmentIndex}"][data-field-index="${fieldIndex}"]`);
+                        if (newElement && newElement.dataset.components) {
+                            expandComponents(newElement);
+                        }
+                    }, 0);
+                    return;
+                }
+            }
 
             // If this is a long field and user clicks again, toggle expand
             if (element.dataset.full && element.classList.contains('selected')) {
@@ -2466,6 +2918,14 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             if (activeSegment) {
                 const index = parseInt(activeSegment.dataset.index);
                 showSegmentDetail(index);
+                // Restore expanded components after re-render
+                expandedComponents.forEach(componentKey => {
+                    const [segmentIndex, fieldIndex] = componentKey.split('-').map(Number);
+                    const element = document.querySelector(`[data-segment-index="${segmentIndex}"][data-field-index="${fieldIndex}"]`);
+                    if (element && element.dataset.components) {
+                        expandComponents(element);
+                    }
+                });
             }
         }
 
@@ -2512,6 +2972,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
 
         function clearFieldHighlight() {
             selectedFieldValue = null;
+            expandedComponents.clear();
 
             // Remove highlighting from segment list
             document.querySelectorAll('.segment-item.has-match').forEach(item => {
@@ -3043,6 +3504,29 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
 
             // Format all fields with copy icons
             const fieldLength = 200; // Longer field display in overlay
+            // Get all separators from MSH segment (same logic as parseHL7)
+            let fieldSep = DEFAULT_FIELD_SEP;
+            let componentSep = DEFAULT_COMPONENT_SEP;
+            let subcomponentSep = DEFAULT_SUBCOMPONENT_SEP;
+            let repetitionSep = DEFAULT_REPETITION_SEP;
+            
+            const mshSegment = parsedSegments.find(s => s.type === 'MSH');
+            if (mshSegment && mshSegment.raw) {
+                const mshLine = mshSegment.raw;
+                if (mshLine.length > 3) {
+                    fieldSep = mshLine[3];
+                }
+                if (mshLine.length > 4) {
+                    componentSep = mshLine[4];
+                }
+                if (mshLine.length > 5) {
+                    repetitionSep = mshLine[5];
+                }
+                if (mshLine.length > 6) {
+                    subcomponentSep = mshLine[6];
+                }
+            }
+            
             const fieldsHtml = segment.fields.map((field, i) => {
                 const fieldValue = field || '';
                 const isLong = fieldValue.length > fieldLength;
@@ -3060,6 +3544,20 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
                 const fieldName = getFieldName(segment.type, hl7FieldNumber);
                 const fieldNameHtml = fieldName ? `<span class="field-name">${escapeHtml(fieldName)}</span>` : '';
 
+                // Parse field value for repeats, components, and subcomponents
+                const parsedField = parseFieldValue(fieldValue, fieldSep, componentSep, subcomponentSep, repetitionSep);
+                const hasComplexStructure = parsedField && (parsedField.hasRepeats || parsedField.hasComponents || parsedField.hasSubcomponents);
+                const componentsData = hasComplexStructure ? JSON.stringify({
+                    structure: parsedField,
+                    separators: {
+                        component: componentSep,
+                        subcomponent: subcomponentSep,
+                        repetition: repetitionSep
+                    },
+                    segmentType: segment.type,
+                    fieldNumber: hl7FieldNumber
+                }) : '';
+
                 // Determine if this field should be highlighted
                 const isSelected = selectedFieldValue !== null && fieldValue === selectedFieldValue;
                 const isMatching = selectedFieldValue !== null && fieldValue === selectedFieldValue && fieldValue.length > 0;
@@ -3068,15 +3566,29 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
                 let fieldValueClasses = 'field-value';
                 if (isSelected) fieldValueClasses += ' selected';
                 if (isMatching) fieldValueClasses += ' matching';
+                if (hasComplexStructure) fieldValueClasses += ' has-components';
 
                 // For long fields, add the long class
                 const fieldContentClass = isLong ? 'field-content long' : 'field-content';
 
                 // Data attribute for the raw field value (used for highlight matching)
                 const dataFieldValue = fieldValue.replace(/"/g, '&quot;');
+                const escapedComponentsData = componentsData.replace(/"/g, '&quot;');
+
+                // Build title text
+                let titleText = 'Click to highlight matching values';
+                if (hasComplexStructure) {
+                    let structureDesc = [];
+                    if (parsedField.hasRepeats) structureDesc.push('repeats');
+                    if (parsedField.hasComponents) structureDesc.push('components');
+                    if (parsedField.hasSubcomponents) structureDesc.push('subcomponents');
+                    titleText += ` (click again to expand ${structureDesc.join(', ')})`;
+                } else if (isLong) {
+                    titleText += ' (click again to expand)';
+                }
 
                 return `
-                    <div class="field-item">
+                    <div class="field-item" data-has-components="${hasComplexStructure}">
                         <span class="field-index">${hl7FieldNumber}:</span>
                         ${fieldNameHtml}
                         <span class="${fieldContentClass}">
@@ -3084,8 +3596,14 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
                                   data-field-value="${dataFieldValue}"
                                   data-segment-index="${index}"
                                   data-field-index="${i}"
+                                  data-hl7-field-number="${hl7FieldNumber}"
+                                  data-segment-type="${segment.type}"
+                                  data-component-sep="${escapeHtml(componentSep)}"
+                                  data-subcomponent-sep="${escapeHtml(subcomponentSep)}"
+                                  data-repetition-sep="${escapeHtml(repetitionSep)}"
+                                  ${hasComplexStructure ? `data-components="${escapedComponentsData}"` : ''}
                                   onclick="selectFieldForHighlightOverlay(this, event)"
-                                  title="Click to highlight matching values${isLong ? ' (click again to expand)' : ''}"
+                                  title="${titleText}"
                                   ${isLong ? `data-full="${fullField}" data-truncated="${truncatedText}"` : ''}>${isLong ? truncatedText : fullField}</span>
                         </span>
                         <span class="field-copy">
@@ -3109,6 +3627,44 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
             event.stopPropagation();
 
             const fieldValue = element.dataset.fieldValue;
+            const segmentIndex = parseInt(element.dataset.segmentIndex);
+            const fieldIndex = parseInt(element.dataset.fieldIndex);
+            const componentKey = `${segmentIndex}-${fieldIndex}`;
+
+            // Check if field has components - handle component expansion
+            if (element.dataset.components) {
+                // If already selected and expanded, collapse
+                if (element.classList.contains('selected') && expandedComponents.has(componentKey)) {
+                    collapseComponents(element);
+                    expandedComponents.delete(componentKey);
+                    return;
+                }
+                // If already selected but not expanded, expand
+                if (element.classList.contains('selected')) {
+                    expandComponents(element);
+                    expandedComponents.add(componentKey);
+                    return;
+                }
+                // If not selected yet, select it and expand components
+                if (fieldValue && fieldValue.length >= 2) {
+                    // Set the selected field value for highlighting
+                    selectedFieldValue = fieldValue;
+                    // Mark this field for component expansion after re-render
+                    expandedComponents.add(componentKey);
+                    // Highlight all matching values (this will re-render)
+                    highlightOverlaySegmentList();
+                    highlightOverlaySegmentDetail();
+                    highlightInPasteBox();
+                    // After re-render, expand the components
+                    setTimeout(() => {
+                        const newElement = document.querySelector(`[data-segment-index="${segmentIndex}"][data-field-index="${fieldIndex}"]`);
+                        if (newElement && newElement.dataset.components) {
+                            expandComponents(newElement);
+                        }
+                    }, 0);
+                    return;
+                }
+            }
 
             // If this is a long field and user clicks again, toggle expand
             if (element.dataset.full && element.classList.contains('selected')) {
@@ -3178,11 +3734,20 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
             if (activeSegment) {
                 const index = parseInt(activeSegment.dataset.index);
                 showOverlaySegmentDetail(index);
+                // Restore expanded components after re-render
+                expandedComponents.forEach(componentKey => {
+                    const [segmentIndex, fieldIndex] = componentKey.split('-').map(Number);
+                    const element = document.querySelector(`[data-segment-index="${segmentIndex}"][data-field-index="${fieldIndex}"]`);
+                    if (element && element.dataset.components) {
+                        expandComponents(element);
+                    }
+                });
             }
         }
 
         function clearFieldHighlightOverlay() {
             selectedFieldValue = null;
+            expandedComponents.clear();
 
             // Remove highlighting from overlay segment list
             document.querySelectorAll('.overlay-segment-item.has-match').forEach(item => {
