@@ -89,9 +89,14 @@ All of these APIs are natively supported in modern browsers (Chrome, Firefox, Sa
 hl7-view/
   ├── index.html
   ├── README.md
+  ├── LICENSE
+  ├── VERSION
+  ├── CHANGELOG.md
+  ├── create-release.sh
   └── .github/
       └── workflows/
-          └── pages.yml
+          ├── pages.yml
+          └── release.yml
 ```
 
 ## Deployment
@@ -106,6 +111,50 @@ This application is deployed to GitHub Pages. The site is automatically deployed
    - The workflow will automatically deploy on push to `main`
 
 The site is available at: [https://flatmapit.github.io/hl7-view/](https://flatmapit.github.io/hl7-view/)
+
+## Releases
+
+Releases are automatically created when version tags are pushed to the repository. Each release includes a downloadable zip file containing the complete application.
+
+### Creating a Release
+
+**Option 1: Using the release script (recommended)**
+```bash
+./create-release.sh
+```
+
+This script will:
+- Read the version from the `VERSION` file
+- Create a git tag (e.g., `v1.0.16`)
+- Push the tag to trigger the GitHub Actions workflow
+- The workflow will automatically create a release with downloadable assets
+
+**Option 2: Manual tag creation**
+```bash
+# Read current version
+VERSION=$(cat VERSION | tr -d '[:space:]')
+
+# Create and push tag
+git tag -a "v$VERSION" -m "Release version $VERSION"
+git push origin "v$VERSION"
+```
+
+**Option 3: Manual workflow trigger**
+1. Go to the [Actions tab](https://github.com/your-org/hl7-view/actions/workflows/release.yml) in GitHub
+2. Select "Create Release" workflow
+3. Click "Run workflow"
+4. Enter the version number (e.g., `1.0.16`)
+5. Click "Run workflow"
+
+### Release Assets
+
+Each release includes:
+- `hl7-view-<version>.zip` - Complete application package containing:
+  - `index.html` - The main application file
+  - `README.md` - Documentation
+  - `LICENSE` - License file
+  - `VERSION` - Version number
+  - `CHANGELOG.md` - Change history
 
 ## Browser Compatibility
 
