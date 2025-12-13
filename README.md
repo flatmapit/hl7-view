@@ -13,12 +13,14 @@ This tool parses HL7 messages and extracts embedded documents from OBX segments.
 
 1. Open `index.html` in a web browser (or use the [live site](https://flatmapit.github.io/hl7-view/))
 2. Paste an HL7 message into the input field, or select a message from the "Recent Messages" dropdown
-3. Click "Parse Message" to parse the message and extract documents
-4. Each parsed message is automatically added to your recent messages history (up to 50 messages)
+3. **No button needed - parsing is automatic**: The message is parsed immediately when you paste, or automatically 5 seconds after you stop typing. There is no "Parse Message" button to click.
+4. Each parsed message is automatically added to your recent messages history (up to 50 messages) if history is enabled in Settings
 5. View segments in the results panel - click any segment to see detailed field information with HL7 field names
-6. Use the "Pop Out" button in the results panel header to open a full-screen overlay showing all segments and fields at once for easier exploration
-7. Use copy icons to copy segments or individual fields to clipboard
-8. View or download extracted documents from the documents section
+6. Click on any field value in the input area to highlight the corresponding field in the parsed results
+7. Use the "Pop Out" button in the results panel header to open a full-screen overlay showing all segments and fields at once for easier exploration
+8. Use copy icons to copy segments or individual fields to clipboard
+9. View or download extracted documents from the documents section
+10. Access Settings (gear icon in header) to enable/disable message history and encryption
 
 ## Features
 
@@ -35,7 +37,11 @@ This tool parses HL7 messages and extracts embedded documents from OBX segments.
 - Full-screen overlay view for parsed results showing all segments and fields at once
 - Download extracted documents
 - Copy segments and individual fields to clipboard
+- **Field highlighting**: Click on any field value in the input area to highlight the corresponding field in the parsed results
+- **Auto-parse**: Messages are parsed automatically on paste or 5 seconds after you stop typing
 - **Recent Messages History**: Access previously parsed messages from a dropdown menu (stores up to 50 messages in browser localStorage)
+  - History can be enabled/disabled via Settings
+  - History is automatically encrypted using Web Crypto API when enabled
 - **Extract document properties**: Automatically extracts and displays up to 5 EXIF/metadata properties for supported file types:
   - **JPEG**: EXIF data (Make, Model, DateTime, Software, Copyright, etc.)
   - **PDF**: Document metadata (Title, Author, Subject, Creator, Producer, CreationDate, ModDate, PDFVersion, and custom properties)
@@ -43,6 +49,7 @@ This tool parses HL7 messages and extracts embedded documents from OBX segments.
   - **PNG**: Image properties (Width, Height, BitDepth, ColorType) and text chunks
   - **TIFF**: Image properties (ImageWidth, ImageLength, BitsPerSample, DateTime, Software, Copyright, etc.)
 - **Copy property values**: Each extracted property has a copy-to-clipboard button for easy copying
+- **Settings**: Configure message history and encryption preferences
 - **Privacy**: All processing happens locally in your browser - your data never leaves your device
 
 ## Technical Details
