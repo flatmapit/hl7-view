@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="version" content="1.0.17">
-    <title>HL7 Document Viewer</title>
+    <meta name="version" content="1.0.18">
+    <title>In-Browser HL7 Viewer</title>
     <!-- GitHub Pages deployment -->
     <style>
         :root {
@@ -164,6 +164,104 @@
 
         .btn-secondary:hover {
             background: var(--border);
+        }
+
+        .dropdown-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-menu {
+            position: fixed;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            min-width: 300px;
+            max-width: 400px;
+            max-height: 400px;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .dropdown-header {
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .dropdown-header-title {
+            flex: 1;
+        }
+
+        .dropdown-clear-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .dropdown-clear-btn:hover {
+            background: var(--error);
+            border-color: var(--error);
+            color: white;
+        }
+
+        .dropdown-list {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .dropdown-item {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .dropdown-item-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .dropdown-item-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .dropdown-empty {
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
         }
 
         .results-panel {
@@ -858,6 +956,90 @@
             background: var(--error);
         }
 
+        .settings-modal-content {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .settings-modal-content h2 {
+            margin: 0 0 1.5rem 0;
+            font-size: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .settings-section {
+            margin-bottom: 2rem;
+        }
+
+        .settings-section h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .settings-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 0.75rem;
+        }
+
+        .settings-option label {
+            flex: 1;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .settings-option .description {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: var(--accent);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(24px);
+        }
+
         .results-overlay {
             display: none;
             position: fixed;
@@ -1033,6 +1215,10 @@
             border-left: 4px solid var(--error);
         }
 
+        .toast.info {
+            border-left: 4px solid var(--accent);
+        }
+
         footer {
             margin-top: 3rem;
             padding-top: 2rem;
@@ -1072,9 +1258,21 @@
 <body>
     <div class="container">
         <header>
-            <h1>HL7 Document Viewer <span style="font-size: 0.6em; font-weight: normal; color: var(--text-secondary);">v<span id="headerVersion">1.0.17</span></span></h1>
-            <p>Parse HL7 messages and extract embedded documents (Images, PDFs, Audio, Video, Documents, and more)</p>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">All processing happens locally in your browser - your data never leaves your device</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div style="flex: 1;"></div>
+                <div style="flex: 1; text-align: center;">
+                    <h1>In-Browser HL7 Viewer</h1>
+                </div>
+                <div style="flex: 1; display: flex; justify-content: flex-end;">
+                    <button class="btn-secondary" onclick="toggleSettingsModal()" style="padding: 0.5rem 1rem; font-size: 0.85rem;" title="Settings">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
+                        </svg>
+                        Settings
+                    </button>
+                </div>
+            </div>
         </header>
 
         <div class="main-content">
@@ -1092,7 +1290,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                         <button class="clear-highlight-btn" id="clearHighlightBtn" onclick="clearFieldHighlight()">Clear Highlight</button>
                     </div>
                     <div class="button-group">
-                        <button class="btn-primary" onclick="parseHL7()">
+                        <button class="btn-primary" onclick="parseHL7()" id="parseBtn" style="display: none;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                 <polyline points="14 2 14 8 20 8"></polyline>
@@ -1102,13 +1300,28 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                             </svg>
                             Parse Message
                         </button>
-                        <button class="btn-secondary" onclick="loadSample()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                            </svg>
-                            Load Sample
-                        </button>
+                        <div class="dropdown-container">
+                            <button class="btn-secondary" onclick="toggleHistoryDropdown()" id="historyBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 12h18M3 6h18M3 18h18"></path>
+                                </svg>
+                                Recent Messages
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 0.25rem;">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </button>
+                            <div class="dropdown-menu" id="historyDropdown" style="display: none;">
+                                <div class="dropdown-header">
+                                    <span class="dropdown-header-title">Recent Messages</span>
+                                    <button class="dropdown-clear-btn" onclick="clearHistory()" title="Clear all messages except sample">
+                                        Clear
+                                    </button>
+                                </div>
+                                <div class="dropdown-list" id="historyList">
+                                    <div class="dropdown-empty">No recent messages</div>
+                                </div>
+                            </div>
+                        </div>
                         <button class="btn-secondary" onclick="clearAll()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"></polyline>
@@ -1135,7 +1348,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                         <div class="empty-state">
                             <div class="empty-state-icon">📋</div>
                             <h3>No Message Parsed</h3>
-                            <p>Paste an HL7 message and click "Parse Message" to view segments and extract embedded documents.</p>
+                            <p>Paste an HL7 message to automatically parse and view segments and extract embedded documents.</p>
                         </div>
                     </div>
                 </div>
@@ -1157,10 +1370,10 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
         <footer>
             <div class="footer-content">
                 <a href="https://github.com/flatmapit/hl7-view" target="_blank" rel="noopener noreferrer">View on GitHub</a>
-                <a href="https://github.com/flatmapit/hl7-view/releases" target="_blank" rel="noopener noreferrer">Download to use this HTML page locally or offline</a>
-                <span>Version <span id="version">1.0.17</span></span>
-                <span>&copy; 2025 Chris Gentle <a href="https://flatmapit.com" target="_blank" rel="noopener noreferrer">flatmapit.com</a></span>
+                <span>Version <span id="version">1.0.18</span></span>
+                <span><a href="https://flatmapit.com" target="_blank" rel="noopener noreferrer">flatmapit.com</a></span>
                 <a href="https://github.com/flatmapit/hl7-view/blob/main/LICENSE?plain=1" target="_blank" rel="noopener noreferrer">MIT License</a>
+                <span>One-file HTML App. No external dependencies. No network calls.</span>
             </div>
         </footer>
     </div>
@@ -1172,6 +1385,32 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
         </div>
     </div>
 
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="settings-modal-content">
+                <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+                <h2>Settings</h2>
+                
+                <div class="settings-section">
+                    <h3>History</h3>
+                    <div class="settings-option">
+                        <div style="flex: 1;">
+                            <label for="historyEnabled">Enable Message History</label>
+                            <div class="description">Store recently parsed messages for quick access. History is encrypted when enabled.</div>
+                        </div>
+                        <div class="toggle-switch" id="historyToggle" onclick="toggleHistoryEnabled()"></div>
+                    </div>
+                    <div class="settings-option" style="opacity: 0.7;">
+                        <div style="flex: 1;">
+                            <label>Encryption</label>
+                            <div class="description">History is automatically encrypted using Web Crypto API when enabled.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="results-overlay" id="resultsOverlay">
         <div class="results-overlay-content" id="resultsOverlayContent"></div>
     </div>
@@ -1180,7 +1419,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
 
     <script>
         // Application version
-        const APP_VERSION = '1.0.17';
+        const APP_VERSION = '1.0.18';
 
         // Magic number patterns for base64 encoded files
         const MAGIC_NUMBERS = {
@@ -1226,82 +1465,148 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
         let extractedDocuments = [];
         let hl7Version = '2.5'; // Default to 2.5 if not specified
         let selectedFieldValue = null; // Currently selected field value for highlighting
+        let parseTimeout = null; // Timeout for auto-parsing after edits
+        let currentParseSource = null; // Track source: 'paste' or 'edit'
 
-        function parseHL7() {
+        function parseHL7(source = null) {
             const input = document.getElementById('hl7Input').value.trim();
             if (!input) {
                 showToast('Please enter an HL7 message', 'error');
                 return;
             }
+            
+            // Store the source for history tracking
+            if (source) {
+                currentParseSource = source;
+            }
 
             // Clear any existing field highlights
             clearFieldHighlight();
 
-            // Parse the message
-            const lines = input.split(/\r\n|\r|\n/).filter(line => line.trim());
-            parsedSegments = [];
-            extractedDocuments = [];
+            let parseError = null;
+            let isValidHL7 = false;
 
-            // Get encoding characters from MSH segment if present
-            let fieldSep = DEFAULT_FIELD_SEP;
-            let componentSep = DEFAULT_COMPONENT_SEP;
-
-            const mshLine = lines.find(l => l.startsWith('MSH'));
-            if (mshLine && mshLine.length > 3) {
-                fieldSep = mshLine[3];
-                if (mshLine.length > 4) {
-                    componentSep = mshLine[4];
+            try {
+                // Parse the message
+                const lines = input.split(/\r\n|\r|\n/).filter(line => line.trim());
+                
+                // Basic validation: check if we have at least one line that looks like HL7
+                if (lines.length === 0) {
+                    parseError = 'No valid HL7 segments found';
+                    throw new Error(parseError);
                 }
-            }
 
-            // Extract HL7 version from MSH-12 (field index 12)
-            hl7Version = '2.5'; // Default
-            if (mshLine) {
-                let mshFields;
+                // Check if we have an MSH segment (required for HL7)
+                const mshLine = lines.find(l => l.startsWith('MSH'));
+                if (!mshLine) {
+                    parseError = 'Missing MSH segment (required for HL7 messages)';
+                    throw new Error(parseError);
+                }
+
+                // Basic MSH validation - should have at least 4 characters (MSH + separator)
+                if (mshLine.length < 4) {
+                    parseError = 'MSH segment appears to be invalid or incomplete';
+                    throw new Error(parseError);
+                }
+
+                parsedSegments = [];
+                extractedDocuments = [];
+
+                // Get encoding characters from MSH segment if present
+                let fieldSep = DEFAULT_FIELD_SEP;
+                let componentSep = DEFAULT_COMPONENT_SEP;
+
                 if (mshLine.length > 3) {
-                    mshFields = ['MSH', fieldSep, ...mshLine.substring(4).split(fieldSep)];
-                    if (mshFields.length > 12 && mshFields[12]) {
-                        const versionField = mshFields[12].trim();
-                        // Extract version number (e.g., "2.5", "2.3", "2.4")
-                        const versionMatch = versionField.match(/(\d+\.\d+)/);
-                        if (versionMatch) {
-                            hl7Version = versionMatch[1];
+                    fieldSep = mshLine[3];
+                    if (mshLine.length > 4) {
+                        componentSep = mshLine[4];
+                    }
+                }
+
+                // Extract HL7 version from MSH-12 (field index 12)
+                hl7Version = '2.5'; // Default
+                if (mshLine) {
+                    let mshFields;
+                    if (mshLine.length > 3) {
+                        mshFields = ['MSH', fieldSep, ...mshLine.substring(4).split(fieldSep)];
+                        if (mshFields.length > 12 && mshFields[12]) {
+                            const versionField = mshFields[12].trim();
+                            // Extract version number (e.g., "2.5", "2.3", "2.4")
+                            const versionMatch = versionField.match(/(\d+\.\d+)/);
+                            if (versionMatch) {
+                                hl7Version = versionMatch[1];
+                            }
                         }
                     }
                 }
+
+                lines.forEach((line, index) => {
+                    const segmentType = line.substring(0, 3);
+                    let fields;
+
+                    if (segmentType === 'MSH') {
+                        // MSH is special - field separator is at position 3
+                        fields = ['MSH', fieldSep, ...line.substring(4).split(fieldSep)];
+                    } else {
+                        fields = line.split(fieldSep);
+                    }
+
+                    const segment = {
+                        index: index,
+                        type: segmentType,
+                        raw: line,
+                        fields: fields
+                    };
+
+                    parsedSegments.push(segment);
+
+                    // Check OBX segments for embedded documents
+                    if (segmentType === 'OBX') {
+                        const doc = extractDocument(segment, componentSep);
+                        if (doc) {
+                            extractedDocuments.push(doc);
+                        }
+                    }
+                });
+
+                // If we got here, parsing was successful
+                isValidHL7 = true;
+
+            } catch (error) {
+                // Parsing failed
+                parseError = parseError || error.message || 'Failed to parse HL7 message';
+                isValidHL7 = false;
             }
 
-            lines.forEach((line, index) => {
-                const segmentType = line.substring(0, 3);
-                let fields;
-
-                if (segmentType === 'MSH') {
-                    // MSH is special - field separator is at position 3
-                    fields = ['MSH', fieldSep, ...line.substring(4).split(fieldSep)];
-                } else {
-                    fields = line.split(fieldSep);
-                }
-
-                const segment = {
-                    index: index,
-                    type: segmentType,
-                    raw: line,
-                    fields: fields
-                };
-
-                parsedSegments.push(segment);
-
-                // Check OBX segments for embedded documents
-                if (segmentType === 'OBX') {
-                    const doc = extractDocument(segment, componentSep);
-                    if (doc) {
-                        extractedDocuments.push(doc);
+            // Only add to history if parsing was successful
+            if (isValidHL7) {
+                // Add message to history with source (fire and forget)
+                const source = currentParseSource || 'manual';
+                addMessageToHistory(input, source).then(wasAlreadyInHistory => {
+                    if (wasAlreadyInHistory) {
+                        showToast('This message is already in your history', 'info');
                     }
-                }
-            });
+                }).catch(err => {
+                    console.error('Failed to add message to history:', err);
+                });
+                // Reset source after use
+                currentParseSource = null;
 
-            renderResults();
-            renderDocuments();
+                renderResults();
+                renderDocuments();
+            } else {
+                // Show error message
+                showToast(parseError || 'Invalid HL7 message format', 'error');
+                
+                // Clear results to show error state
+                parsedSegments = [];
+                extractedDocuments = [];
+                renderResults();
+                renderDocuments();
+                
+                // Reset source
+                currentParseSource = null;
+            }
         }
 
         function extractDocument(segment, componentSep) {
@@ -2340,8 +2645,10 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             'PID.18': ['ID Number', 'Check Digit', 'Check Digit Scheme', 'Assigning Authority', 'ID Type Code', 'Assigning Facility', 'Effective Date', 'Expiration Date', 'Assigning Jurisdiction', 'Assigning Agency', 'Security Check', 'Security Check Scheme'],
             'PID.19': ['ID Number', 'Check Digit', 'Check Digit Scheme', 'Assigning Authority', 'ID Type Code', 'Assigning Facility', 'Effective Date', 'Expiration Date', 'Assigning Jurisdiction', 'Assigning Agency', 'Security Check', 'Security Check Scheme'],
             
+            // XPN data type (Extended Person Name) - 14 components
+            'PID.5': ['Family Name', 'Given Name', 'Second and Further Given Names or Initials', 'Suffix', 'Prefix', 'Degree', 'Name Type Code', 'Name Representation Code', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
+            
             // XCN data type (Extended Composite ID Number and Name for Persons) - 20 components
-            'PID.5': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
             'PV1.7': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
             'PV1.8': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
             'PV1.9': ['ID Number', 'Family Name', 'Given Name', 'Second Name', 'Suffix', 'Prefix', 'Degree', 'Source Table', 'Assigning Authority', 'Name Type Code', 'ID Check Digit', 'Check Digit Scheme', 'ID Type Code', 'Assigning Facility', 'Name Representation', 'Name Context', 'Name Validity Range', 'Name Assembly Order', 'Effective Date', 'Expiration Date', 'Professional Suffix'],
@@ -3383,6 +3690,657 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             return btoa(binary);
         }
 
+        // Encryption and settings management
+        const HISTORY_ENABLED_KEY = 'hl7_history_enabled';
+        const ENCRYPTION_KEY_STORAGE_KEY = 'hl7_encryption_key';
+        const IV_STORAGE_KEY = 'hl7_encryption_iv';
+
+        // Get or generate encryption key
+        async function getEncryptionKey() {
+            try {
+                let keyData = localStorage.getItem(ENCRYPTION_KEY_STORAGE_KEY);
+                let ivData = localStorage.getItem(IV_STORAGE_KEY);
+                
+                if (!keyData || !ivData) {
+                    // Generate new key and IV
+                    const key = await crypto.subtle.generateKey(
+                        {
+                            name: 'AES-GCM',
+                            length: 256
+                        },
+                        true,
+                        ['encrypt', 'decrypt']
+                    );
+                    
+                    const exportedKey = await crypto.subtle.exportKey('raw', key);
+                    const iv = crypto.getRandomValues(new Uint8Array(12));
+                    
+                    // Store as base64
+                    keyData = btoa(String.fromCharCode(...new Uint8Array(exportedKey)));
+                    ivData = btoa(String.fromCharCode(...iv));
+                    
+                    localStorage.setItem(ENCRYPTION_KEY_STORAGE_KEY, keyData);
+                    localStorage.setItem(IV_STORAGE_KEY, ivData);
+                }
+                
+                // Import key from stored data
+                const keyBytes = Uint8Array.from(atob(keyData), c => c.charCodeAt(0));
+                const cryptoKey = await crypto.subtle.importKey(
+                    'raw',
+                    keyBytes,
+                    {
+                        name: 'AES-GCM',
+                        length: 256
+                    },
+                    false,
+                    ['encrypt', 'decrypt']
+                );
+                
+                const iv = Uint8Array.from(atob(ivData), c => c.charCodeAt(0));
+                
+                return { key: cryptoKey, iv: iv };
+            } catch (e) {
+                console.error('Failed to get encryption key:', e);
+                throw e;
+            }
+        }
+
+        // Encrypt data
+        async function encryptData(data) {
+            try {
+                const { key, iv } = await getEncryptionKey();
+                const encoder = new TextEncoder();
+                const dataBuffer = encoder.encode(data);
+                
+                const encrypted = await crypto.subtle.encrypt(
+                    {
+                        name: 'AES-GCM',
+                        iv: iv
+                    },
+                    key,
+                    dataBuffer
+                );
+                
+                // Convert to base64 for storage
+                const encryptedArray = new Uint8Array(encrypted);
+                return btoa(String.fromCharCode(...encryptedArray));
+            } catch (e) {
+                console.error('Encryption failed:', e);
+                throw e;
+            }
+        }
+
+        // Decrypt data
+        async function decryptData(encryptedData) {
+            try {
+                const { key, iv } = await getEncryptionKey();
+                const encryptedArray = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+                
+                const decrypted = await crypto.subtle.decrypt(
+                    {
+                        name: 'AES-GCM',
+                        iv: iv
+                    },
+                    key,
+                    encryptedArray
+                );
+                
+                const decoder = new TextDecoder();
+                return decoder.decode(decrypted);
+            } catch (e) {
+                console.error('Decryption failed:', e);
+                throw e;
+            }
+        }
+
+        // Check if history is enabled
+        function isHistoryEnabled() {
+            const stored = localStorage.getItem(HISTORY_ENABLED_KEY);
+            // Default to true if not set (backward compatibility)
+            return stored === null ? true : stored === 'true';
+        }
+
+        // Set history enabled state
+        function setHistoryEnabled(enabled) {
+            localStorage.setItem(HISTORY_ENABLED_KEY, enabled.toString());
+        }
+
+        // History management
+        const HISTORY_STORAGE_KEY = 'hl7_message_history';
+        const MAX_HISTORY_ITEMS = 50;
+
+        async function getMessageHistory() {
+            if (!isHistoryEnabled()) {
+                return [];
+            }
+            
+            try {
+                const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+                if (!stored) {
+                    return [];
+                }
+                
+                // Try to decrypt (new encrypted format)
+                try {
+                    const decrypted = await decryptData(stored);
+                    return JSON.parse(decrypted);
+                } catch (decryptError) {
+                    // If decryption fails, try parsing as plain JSON (backward compatibility)
+                    try {
+                        return JSON.parse(stored);
+                    } catch (parseError) {
+                        // If both fail, return empty array
+                        console.error('Failed to parse history:', parseError);
+                        return [];
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to get history:', e);
+                return [];
+            }
+        }
+
+        async function saveMessageHistory(history) {
+            if (!isHistoryEnabled()) {
+                // If history is disabled, clear any existing history
+                localStorage.removeItem(HISTORY_STORAGE_KEY);
+                return;
+            }
+            
+            try {
+                const jsonData = JSON.stringify(history);
+                const encrypted = await encryptData(jsonData);
+                localStorage.setItem(HISTORY_STORAGE_KEY, encrypted);
+            } catch (e) {
+                console.error('Failed to save history:', e);
+            }
+        }
+
+        function normalizeMessage(message) {
+            // Normalize message for comparison (remove whitespace differences)
+            return message.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        }
+
+        function extractMessageInfo(message) {
+            const normalized = normalizeMessage(message);
+            const lines = normalized.split('\n').filter(line => line.trim());
+            const mshLine = lines.find(l => l.startsWith('MSH'));
+            
+            let messageType = 'Unknown';
+            let mshId = '';
+            let timestamp = new Date().toLocaleString();
+            
+            if (mshLine) {
+                const fieldSep = mshLine[3] || '|';
+                const mshFields = ['MSH', fieldSep, ...mshLine.substring(4).split(fieldSep)];
+                
+                // MSH-9 is Message Type (index 9)
+                if (mshFields.length > 9 && mshFields[9]) {
+                    const msgTypeParts = mshFields[9].split('^');
+                    messageType = msgTypeParts[0] || 'Unknown';
+                }
+                
+                // MSH-10 is Message Control ID (index 10)
+                if (mshFields.length > 10 && mshFields[10]) {
+                    mshId = mshFields[10].trim();
+                }
+                
+                // MSH-7 is Date/Time of Message (index 7)
+                if (mshFields.length > 7 && mshFields[7]) {
+                    const dtStr = mshFields[7].trim();
+                    if (dtStr) {
+                        // Try to parse HL7 date format (YYYYMMDDHHMMSS)
+                        try {
+                            const year = dtStr.substring(0, 4);
+                            const month = dtStr.substring(4, 6);
+                            const day = dtStr.substring(6, 8);
+                            const hour = dtStr.substring(8, 10) || '00';
+                            const minute = dtStr.substring(10, 12) || '00';
+                            const second = dtStr.substring(12, 14) || '00';
+                            const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                            if (!isNaN(date.getTime())) {
+                                timestamp = date.toLocaleString();
+                            }
+                        } catch (e) {
+                            // Use current time if parsing fails
+                        }
+                    }
+                }
+            }
+            
+            return {
+                messageType,
+                mshId,
+                timestamp
+            };
+        }
+
+        async function addMessageToHistory(message, source = 'manual') {
+            // Check if history is enabled
+            if (!isHistoryEnabled()) {
+                return false;
+            }
+            
+            const normalized = normalizeMessage(message);
+            if (!normalized) return false;
+            
+            let history = await getMessageHistory();
+            
+            // Check if message already exists (including sample messages)
+            const existingIndex = history.findIndex(item => 
+                normalizeMessage(item.message) === normalized
+            );
+            
+            if (existingIndex !== -1) {
+                const existing = history[existingIndex];
+                
+                // If it's the sample message, don't modify or move it
+                if (existing.isSample === true) {
+                    return true; // Indicates it was already in history (sample is protected)
+                }
+                
+                // For non-sample messages, move to top and update source if provided
+                history.splice(existingIndex, 1);
+                if (source && source !== 'manual') {
+                    existing.source = source;
+                    // Update label to include source
+                    const info = extractMessageInfo(message);
+                    let label = info.messageType;
+                    if (info.mshId) {
+                        label += ` - ${info.mshId}`;
+                    }
+                    label += ` (${info.timestamp})`;
+                    const sourceLabel = source === 'paste' ? 'Pasted' : 'Edited';
+                    label += ` [${sourceLabel}]`;
+                    existing.label = label;
+                }
+                history.unshift(existing);
+                await saveMessageHistory(history);
+                return true; // Indicates it was already in history
+            }
+            
+            // Extract message info
+            const info = extractMessageInfo(message);
+            
+            // Create label with source indicator
+            let label = info.messageType;
+            if (info.mshId) {
+                label += ` - ${info.mshId}`;
+            }
+            label += ` (${info.timestamp})`;
+            if (source && source !== 'manual') {
+                const sourceLabel = source === 'paste' ? 'Pasted' : 'Edited';
+                label += ` [${sourceLabel}]`;
+            }
+            
+            // Add to top of history
+            const historyItem = {
+                message: message,
+                label: label,
+                timestamp: info.timestamp,
+                messageType: info.messageType,
+                mshId: info.mshId,
+                source: source,
+                addedAt: new Date().toISOString()
+            };
+            
+            history.unshift(historyItem);
+            
+            // Keep only last MAX_HISTORY_ITEMS, but always preserve the sample message
+            if (history.length > MAX_HISTORY_ITEMS) {
+                // Find and separate the sample message
+                const sampleIndex = history.findIndex(item => item.isSample === true);
+                let sampleItem = null;
+                if (sampleIndex !== -1) {
+                    sampleItem = history.splice(sampleIndex, 1)[0];
+                }
+                // Trim to MAX_HISTORY_ITEMS - 1 (to make room for sample)
+                history = history.slice(0, MAX_HISTORY_ITEMS - 1);
+                // Add sample back at the end (or beginning if preferred)
+                if (sampleItem) {
+                    history.push(sampleItem);
+                }
+            }
+            
+            await saveMessageHistory(history);
+            return false; // Indicates it was new
+        }
+
+        async function clearHistory(event) {
+            // Prevent event from bubbling up and closing dropdown
+            if (event) {
+                event.stopPropagation();
+            }
+            
+            if (!isHistoryEnabled()) {
+                showToast('History is disabled', 'info');
+                return;
+            }
+            
+            const history = await getMessageHistory();
+            
+            // Find and keep only the sample message
+            let sampleItem = history.find(item => item.isSample === true);
+            
+            // If sample doesn't exist, create it (shouldn't happen, but safety check)
+            if (!sampleItem) {
+                // Re-initialize sample by calling the sample creation logic
+                const samplePng = createImageWithText('PNG', 'png');
+                const sampleJpeg = createImageWithText('JPEG', 'jpeg');
+                const sampleWav = createPingSound();
+                
+                const sample = `MSH|^~\\&|SENDING_APP|SENDING_FACILITY|RECEIVING_APP|RECEIVING_FACILITY|20231215120000||ORU^R01|MSG00001|P|2.4
+PID|1||12345^^^Hospital^MR||Doe^John^A||19800101|M|||123 Main St^^City^ST^12345
+OBR|1|ORD001|ACC001|85025^CBC^LN|||20231215100000
+OBX|1|ED|PDF^Report||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovUmVzb3VyY2VzIDw8Ci9Gb250IDw8Ci9GMSA0IDAgUgo+Pgo+PgovQ29udGVudHMgNSAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iago1IDAgb2JqCjw8Ci9MZW5ndGggNDQKPj4Kc3RyZWFtCkJUCi9GMSAxOCBUZgoxMDAgNzAwIFRkCihITDcgUmVwb3J0KSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxNDcgMDAwMDAgbiAKMDAwMDAwMDI2NiAwMDAwMCBuIAowMDAwMDAwMzQzIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNgovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNDM3CiUlRU9G||||||F
+OBX|2|ED|PNG^Image^Scan||^image^png^Base64^${samplePng}||||||F
+OBX|3|ED|JPEG^Photo||^image^jpeg^Base64^${sampleJpeg}||||||F
+OBX|4|ED|WAV^Audio^Recording||^audio^wav^Base64^${sampleWav}||||||F
+OBX|5|NM|WBC^White Blood Cell Count||7.5|10*3/uL|4.5-11.0|N|||F
+OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
+                
+                const sampleInfo = extractMessageInfo(sample);
+                sampleItem = {
+                    message: sample,
+                    label: `Sample ORU - ${sampleInfo.mshId} (${sampleInfo.timestamp})`,
+                    timestamp: sampleInfo.timestamp,
+                    messageType: sampleInfo.messageType, // Use actual extracted type from message
+                    mshId: sampleInfo.mshId,
+                    source: 'manual',
+                    isSample: true,
+                    addedAt: new Date().toISOString()
+                };
+            }
+            
+            // Clear history, keeping only the sample
+            const newHistory = [sampleItem];
+            await saveMessageHistory(newHistory);
+            
+            // Refresh the dropdown display
+            await renderHistoryDropdown();
+            
+            // Show confirmation
+            showToast('History cleared (sample message retained)', 'success');
+            
+            // Close dropdown after a brief delay
+            setTimeout(() => {
+                const dropdown = document.getElementById('historyDropdown');
+                if (dropdown) {
+                    dropdown.style.display = 'none';
+                }
+            }, 500);
+        }
+
+        async function renderHistoryDropdown() {
+            if (!isHistoryEnabled()) {
+                const listEl = document.getElementById('historyList');
+                if (listEl) {
+                    listEl.innerHTML = '<div class="dropdown-empty">History is disabled in settings</div>';
+                }
+                return;
+            }
+            
+            const history = await getMessageHistory();
+            const listEl = document.getElementById('historyList');
+            
+            if (!listEl) return;
+            
+            // Safety check: ensure sample exists
+            const hasSample = history.some(item => item.isSample === true);
+            if (!hasSample) {
+                // Sample is missing, re-initialize
+                await initializeHistory();
+                // Re-fetch history after initialization
+                const updatedHistory = await getMessageHistory();
+                if (updatedHistory.length === 0) {
+                    listEl.innerHTML = '<div class="dropdown-empty">No recent messages</div>';
+                    return;
+                }
+                // Use updated history
+                const finalHistory = updatedHistory;
+                listEl.innerHTML = finalHistory.map((item, index) => {
+                    const sourceBadge = item.source && item.source !== 'manual' 
+                        ? `<span style="background: ${item.source === 'paste' ? 'var(--success)' : 'var(--accent)'}; color: white; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase;">${item.source === 'paste' ? 'Pasted' : 'Edited'}</span>`
+                        : '';
+                    return `
+                    <div class="dropdown-item" onclick="selectMessageFromHistory(${index})">
+                        <div class="dropdown-item-label" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            ${escapeHtml(item.label)}
+                            ${sourceBadge}
+                        </div>
+                        <div class="dropdown-item-meta">
+                            <span>${escapeHtml(item.messageType)}</span>
+                            ${item.mshId ? `<span>ID: ${escapeHtml(item.mshId)}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+                }).join('');
+                return;
+            }
+            
+            if (history.length === 0) {
+                listEl.innerHTML = '<div class="dropdown-empty">No recent messages</div>';
+                return;
+            }
+            
+            listEl.innerHTML = history.map((item, index) => {
+                const sourceBadge = item.source && item.source !== 'manual' 
+                    ? `<span style="background: ${item.source === 'paste' ? 'var(--success)' : 'var(--accent)'}; color: white; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase;">${item.source === 'paste' ? 'Pasted' : 'Edited'}</span>`
+                    : '';
+                return `
+                <div class="dropdown-item" onclick="selectMessageFromHistory(${index})">
+                    <div class="dropdown-item-label" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        ${escapeHtml(item.label)}
+                        ${sourceBadge}
+                    </div>
+                    <div class="dropdown-item-meta">
+                        <span>${escapeHtml(item.messageType)}</span>
+                        ${item.mshId ? `<span>ID: ${escapeHtml(item.mshId)}</span>` : ''}
+                    </div>
+                </div>
+            `;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function toggleHistoryDropdown() {
+            if (!isHistoryEnabled()) {
+                showToast('History is disabled. Enable it in Settings to use this feature.', 'info');
+                return;
+            }
+            
+            const dropdown = document.getElementById('historyDropdown');
+            const button = document.getElementById('historyBtn');
+            if (!dropdown || !button) return;
+            
+            if (dropdown.style.display === 'none' || !dropdown.style.display) {
+                renderHistoryDropdown().catch(err => console.error('Failed to render history:', err));
+                
+                // Calculate position based on button position
+                const buttonRect = button.getBoundingClientRect();
+                const dropdownWidth = 300; // min-width
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                
+                // Position below the button
+                let top = buttonRect.bottom + 8; // 0.5rem = 8px
+                let left = buttonRect.left;
+                
+                // Adjust if dropdown would go off the right edge
+                if (left + dropdownWidth > viewportWidth) {
+                    left = viewportWidth - dropdownWidth - 16; // 16px padding from edge
+                }
+                
+                // Adjust if dropdown would go off the bottom edge
+                const dropdownHeight = 400; // max-height
+                if (top + dropdownHeight > viewportHeight) {
+                    // Position above the button instead
+                    top = buttonRect.top - dropdownHeight - 8;
+                    if (top < 0) {
+                        // If still doesn't fit, position at top of viewport
+                        top = 16;
+                    }
+                }
+                
+                // Ensure left is not negative
+                if (left < 0) {
+                    left = 16;
+                }
+                
+                dropdown.style.top = `${top}px`;
+                dropdown.style.left = `${left}px`;
+                dropdown.style.display = 'block';
+                
+                // Close dropdown when clicking outside
+                setTimeout(() => {
+                    document.addEventListener('click', closeHistoryDropdownOnOutsideClick, true);
+                }, 0);
+            } else {
+                dropdown.style.display = 'none';
+                document.removeEventListener('click', closeHistoryDropdownOnOutsideClick, true);
+            }
+        }
+
+        function closeHistoryDropdownOnOutsideClick(e) {
+            const dropdown = document.getElementById('historyDropdown');
+            const button = document.getElementById('historyBtn');
+            
+            if (dropdown && button && !dropdown.contains(e.target) && !button.contains(e.target)) {
+                dropdown.style.display = 'none';
+                document.removeEventListener('click', closeHistoryDropdownOnOutsideClick, true);
+            }
+        }
+
+        async function selectMessageFromHistory(index) {
+            if (!isHistoryEnabled()) {
+                showToast('History is disabled', 'info');
+                return;
+            }
+            
+            const history = await getMessageHistory();
+            if (index >= 0 && index < history.length) {
+                const item = history[index];
+                const hl7Input = document.getElementById('hl7Input');
+                hl7Input.value = item.message;
+                document.getElementById('historyDropdown').style.display = 'none';
+                document.removeEventListener('click', closeHistoryDropdownOnOutsideClick, true);
+                showToast('Message loaded from history', 'success');
+                // Clear any pending timeout and parse immediately
+                if (parseTimeout) {
+                    clearTimeout(parseTimeout);
+                    parseTimeout = null;
+                }
+                // Parse the loaded message
+                if (item.message.trim()) {
+                    parseHL7();
+                }
+            }
+        }
+
+        async function initializeHistory() {
+            if (!isHistoryEnabled()) {
+                return;
+            }
+            
+            try {
+                const history = await getMessageHistory();
+                
+                // Migrate existing sample items: update "Sample ORM" labels to "Sample ORU"
+                let historyUpdated = false;
+                history.forEach(item => {
+                    if (item.isSample === true && item.label && item.label.includes('Sample ORM')) {
+                        // Update label from "Sample ORM" to "Sample ORU"
+                        item.label = item.label.replace('Sample ORM', 'Sample ORU');
+                        historyUpdated = true;
+                    }
+                });
+                if (historyUpdated) {
+                    await saveMessageHistory(history);
+                }
+                
+                // Check if sample message exists
+                const hasSample = history.some(item => item.isSample === true);
+                
+                // Always ensure sample exists - if missing, add it
+                if (!hasSample) {
+                    // Get the sample message from loadSample
+                    const samplePng = createImageWithText('PNG', 'png');
+                    const sampleJpeg = createImageWithText('JPEG', 'jpeg');
+                    const sampleWav = createPingSound();
+                    
+                    const sample = `MSH|^~\\&|SENDING_APP|SENDING_FACILITY|RECEIVING_APP|RECEIVING_FACILITY|20231215120000||ORU^R01|MSG00001|P|2.4
+PID|1||12345^^^Hospital^MR||Doe^John^A||19800101|M|||123 Main St^^City^ST^12345
+OBR|1|ORD001|ACC001|85025^CBC^LN|||20231215100000
+OBX|1|ED|PDF^Report||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovUmVzb3VyY2VzIDw8Ci9Gb250IDw8Ci9GMSA0IDAgUgo+Pgo+PgovQ29udGVudHMgNSAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iago1IDAgb2JqCjw8Ci9MZW5ndGggNDQKPj4Kc3RyZWFtCkJUCi9GMSAxOCBUZgoxMDAgNzAwIFRkCihITDcgUmVwb3J0KSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxNDcgMDAwMDAgbiAKMDAwMDAwMDI2NiAwMDAwMCBuIAowMDAwMDAwMzQzIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNgovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNDM3CiUlRU9G||||||F
+OBX|2|ED|PNG^Image^Scan||^image^png^Base64^${samplePng}||||||F
+OBX|3|ED|JPEG^Photo||^image^jpeg^Base64^${sampleJpeg}||||||F
+OBX|4|ED|WAV^Audio^Recording||^audio^wav^Base64^${sampleWav}||||||F
+OBX|5|NM|WBC^White Blood Cell Count||7.5|10*3/uL|4.5-11.0|N|||F
+OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
+                    
+                    // Add as "Sample ORU" (label and message type both reflect ORU from the message)
+                    const sampleInfo = extractMessageInfo(sample);
+                    const historyItem = {
+                        message: sample,
+                        label: `Sample ORU - ${sampleInfo.mshId} (${sampleInfo.timestamp})`,
+                        timestamp: sampleInfo.timestamp,
+                        messageType: sampleInfo.messageType, // Use actual extracted type, not hardcoded
+                        mshId: sampleInfo.mshId,
+                        source: 'manual', // Pre-populated sample
+                        isSample: true, // Mark as sample message that should be protected
+                        addedAt: new Date().toISOString()
+                    };
+                    
+                    if (history.length === 0) {
+                        // If history is empty, just save the sample
+                        await saveMessageHistory([historyItem]);
+                    } else {
+                        // If history exists but sample is missing, add it to the end
+                        history.push(historyItem);
+                        await saveMessageHistory(history);
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing history:', error);
+                // If there's an error, try to create a fresh history with just the sample
+                try {
+                    const samplePng = createImageWithText('PNG', 'png');
+                    const sampleJpeg = createImageWithText('JPEG', 'jpeg');
+                    const sampleWav = createPingSound();
+                    
+                    const sample = `MSH|^~\\&|SENDING_APP|SENDING_FACILITY|RECEIVING_APP|RECEIVING_FACILITY|20231215120000||ORU^R01|MSG00001|P|2.4
+PID|1||12345^^^Hospital^MR||Doe^John^A||19800101|M|||123 Main St^^City^ST^12345
+OBR|1|ORD001|ACC001|85025^CBC^LN|||20231215100000
+OBX|1|ED|PDF^Report||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovUmVzb3VyY2VzIDw8Ci9Gb250IDw8Ci9GMSA0IDAgUgo+Pgo+PgovQ29udGVudHMgNSAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iago1IDAgb2JqCjw8Ci9MZW5ndGggNDQKPj4Kc3RyZWFtCkJUCi9GMSAxOCBUZgoxMDAgNzAwIFRkCihITDcgUmVwb3J0KSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxNDcgMDAwMDAgbiAKMDAwMDAwMDI2NiAwMDAwMCBuIAowMDAwMDAwMzQzIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNgovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNDM3CiUlRU9G||||||F
+OBX|2|ED|PNG^Image^Scan||^image^png^Base64^${samplePng}||||||F
+OBX|3|ED|JPEG^Photo||^image^jpeg^Base64^${sampleJpeg}||||||F
+OBX|4|ED|WAV^Audio^Recording||^audio^wav^Base64^${sampleWav}||||||F
+OBX|5|NM|WBC^White Blood Cell Count||7.5|10*3/uL|4.5-11.0|N|||F
+OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
+                    
+                    const sampleInfo = extractMessageInfo(sample);
+                    const historyItem = {
+                        message: sample,
+                        label: `Sample ORU - ${sampleInfo.mshId} (${sampleInfo.timestamp})`,
+                        timestamp: sampleInfo.timestamp,
+                        messageType: sampleInfo.messageType, // Use actual extracted type from message
+                        mshId: sampleInfo.mshId,
+                        source: 'manual',
+                        isSample: true,
+                        addedAt: new Date().toISOString()
+                    };
+                    await saveMessageHistory([historyItem]);
+                } catch (fallbackError) {
+                    console.error('Failed to create sample history:', fallbackError);
+                }
+            }
+        }
+
         function loadSample() {
             // Generate PNG and JPEG images with text in pixel font
             const samplePng = createImageWithText('PNG', 'png');
@@ -3416,7 +4374,7 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
                 <div class="empty-state">
                     <div class="empty-state-icon">📋</div>
                     <h3>No Message Parsed</h3>
-                    <p>Paste an HL7 message and click "Parse Message" to view segments and extract embedded documents.</p>
+                    <p>Paste an HL7 message to automatically parse and view segments and extract embedded documents.</p>
                 </div>
             `;
             document.getElementById('documentsSection').style.display = 'none';
@@ -3797,11 +4755,76 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
             }, 3000);
         }
 
+        // Settings modal functions
+        function toggleSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            if (modal) {
+                modal.classList.toggle('active');
+                if (modal.classList.contains('active')) {
+                    updateSettingsUI();
+                }
+            }
+        }
+
+        function closeSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+
+        function updateSettingsUI() {
+            const toggle = document.getElementById('historyToggle');
+            if (toggle) {
+                const enabled = isHistoryEnabled();
+                if (enabled) {
+                    toggle.classList.add('active');
+                } else {
+                    toggle.classList.remove('active');
+                }
+            }
+            
+            // Update history button state
+            const historyBtn = document.getElementById('historyBtn');
+            if (historyBtn) {
+                if (isHistoryEnabled()) {
+                    historyBtn.style.opacity = '1';
+                    historyBtn.style.cursor = 'pointer';
+                    historyBtn.title = 'Recent Messages';
+                } else {
+                    historyBtn.style.opacity = '0.5';
+                    historyBtn.style.cursor = 'not-allowed';
+                    historyBtn.title = 'History is disabled - enable in Settings';
+                }
+            }
+        }
+
+        async function toggleHistoryEnabled() {
+            const currentState = isHistoryEnabled();
+            const newState = !currentState;
+            setHistoryEnabled(newState);
+            updateSettingsUI();
+            
+            if (!newState) {
+                // If disabling, clear the history storage (but keep the preference)
+                localStorage.removeItem(HISTORY_STORAGE_KEY);
+                showToast('History disabled - existing history cleared', 'success');
+            } else {
+                showToast('History enabled - messages will be encrypted and stored', 'success');
+                // Re-initialize history if it was disabled
+                await initializeHistory().catch(err => console.error('Failed to initialize history:', err));
+            }
+            
+            // Update history dropdown if it's open
+            await renderHistoryDropdown().catch(err => console.error('Failed to render history:', err));
+        }
+
         // Close modal on escape key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeModal();
                 closeResultsOverlay();
+                closeSettingsModal();
             }
         });
 
@@ -3809,6 +4832,13 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
         document.getElementById('imageModal').addEventListener('click', (e) => {
             if (e.target.id === 'imageModal') {
                 closeModal();
+            }
+        });
+
+        // Close settings modal on backdrop click
+        document.getElementById('settingsModal').addEventListener('click', (e) => {
+            if (e.target.id === 'settingsModal') {
+                closeSettingsModal();
             }
         });
 
@@ -3828,6 +4858,47 @@ OBX|6|NM|RBC^Red Blood Cell Count||4.8|10*6/uL|4.2-5.9|N|||F`;
             const headerVersionEl = document.getElementById('headerVersion');
             if (headerVersionEl) {
                 headerVersionEl.textContent = APP_VERSION;
+            }
+            // Initialize message history
+            initializeHistory().catch(err => console.error('Failed to initialize history:', err));
+            
+            // Initialize settings UI
+            updateSettingsUI();
+            
+            // Set up auto-parse functionality
+            const hl7Input = document.getElementById('hl7Input');
+            if (hl7Input) {
+                // Parse immediately on paste
+                hl7Input.addEventListener('paste', () => {
+                    // Clear any pending timeout
+                    if (parseTimeout) {
+                        clearTimeout(parseTimeout);
+                        parseTimeout = null;
+                    }
+                    // Parse after paste event completes (small delay to ensure value is updated)
+                    setTimeout(() => {
+                        const input = hl7Input.value.trim();
+                        if (input) {
+                            parseHL7('paste');
+                        }
+                    }, 10);
+                });
+                
+                // Parse 5 seconds after user stops editing
+                hl7Input.addEventListener('input', () => {
+                    // Clear any existing timeout
+                    if (parseTimeout) {
+                        clearTimeout(parseTimeout);
+                    }
+                    // Set new timeout for 5 seconds
+                    parseTimeout = setTimeout(() => {
+                        const input = hl7Input.value.trim();
+                        if (input) {
+                            parseHL7('edit');
+                        }
+                        parseTimeout = null;
+                    }, 5000);
+                });
             }
         });
     </script>

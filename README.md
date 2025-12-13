@@ -12,12 +12,13 @@ This tool parses HL7 messages and extracts embedded documents from OBX segments.
 ## Usage
 
 1. Open `index.html` in a web browser (or use the [live site](https://flatmapit.github.io/hl7-view/))
-2. Paste an HL7 message into the input field
+2. Paste an HL7 message into the input field, or select a message from the "Recent Messages" dropdown
 3. Click "Parse Message" to parse the message and extract documents
-4. View segments in the results panel - click any segment to see detailed field information with HL7 field names
-5. Use the "Pop Out" button in the results panel header to open a full-screen overlay showing all segments and fields at once for easier exploration
-6. Use copy icons to copy segments or individual fields to clipboard
-7. View or download extracted documents from the documents section
+4. Each parsed message is automatically added to your recent messages history (up to 50 messages)
+5. View segments in the results panel - click any segment to see detailed field information with HL7 field names
+6. Use the "Pop Out" button in the results panel header to open a full-screen overlay showing all segments and fields at once for easier exploration
+7. Use copy icons to copy segments or individual fields to clipboard
+8. View or download extracted documents from the documents section
 
 ## Features
 
@@ -34,7 +35,7 @@ This tool parses HL7 messages and extracts embedded documents from OBX segments.
 - Full-screen overlay view for parsed results showing all segments and fields at once
 - Download extracted documents
 - Copy segments and individual fields to clipboard
-- Load sample HL7 message for testing
+- **Recent Messages History**: Access previously parsed messages from a dropdown menu (stores up to 50 messages in browser localStorage)
 - **Extract document properties**: Automatically extracts and displays up to 5 EXIF/metadata properties for supported file types:
   - **JPEG**: EXIF data (Make, Model, DateTime, Software, Copyright, etc.)
   - **PDF**: Document metadata (Title, Author, Subject, Creator, Producer, CreationDate, ModDate, PDFVersion, and custom properties)

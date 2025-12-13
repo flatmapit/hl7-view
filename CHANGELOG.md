@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.18] - 2025-12-13
+
+### Changed
+- Updated page title and header to "In-Browser HL7 Viewer"
+- Simplified header - removed version number and description text
+- Updated footer copyright to just "flatmapit.com"
+- Removed "Download to use this HTML page locally or offline" link from footer
+- Added footer text: "One-file HTML App. No external dependencies. No network calls."
+
+## [1.0.17] - 2025-12-XX
+
+### Added
+- **Recent Messages History**: Replaced "Load Sample" button with "Recent Messages" dropdown
+- Message history automatically tracks parsed HL7 messages (up to 50 messages)
+- History entries are labeled with message type, MSH ID, and timestamp
+- Pre-populated with "Sample ORM" message for quick access
+- Duplicate detection - notifies user if a message is already in history
+- Click any history entry to load it into the input field
+- History persists in browser localStorage
+
+### Changed
+- "Load Sample" button replaced with "Recent Messages" dropdown menu
+
 ## [1.0.16] - 2025-12-13
 
 ### Fixed
