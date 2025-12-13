@@ -1463,7 +1463,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
 
         let parsedSegments = [];
         let extractedDocuments = [];
-        let hl7Version = '2.5'; // Default to 2.5 if not specified
+        let hl7Version = '2.4'; // Default to 2.4 if not specified
         let selectedFieldValue = null; // Currently selected field value for highlighting
         let parseTimeout = null; // Timeout for auto-parsing after edits
         let currentParseSource = null; // Track source: 'paste' or 'edit'
@@ -1524,7 +1524,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 }
 
                 // Extract HL7 version from MSH-12 (field index 12)
-                hl7Version = '2.5'; // Default
+                hl7Version = '2.4'; // Default
                 if (mshLine) {
                     let mshFields;
                     if (mshLine.length > 3) {

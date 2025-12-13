@@ -59,7 +59,7 @@ The application is a single HTML file with embedded CSS and JavaScript. It runs 
 **One-file HTML App. No external dependencies. No network calls.**
 
 ### HL7 Parsing
-- Automatically detects HL7 version from MSH-12 field (defaults to 2.5)
+- Automatically detects HL7 version from MSH-12 field (defaults to 2.4)
 - Displays field names for common segments (MSH, PID, OBX, OBR, PV1, ORC, NTE, AL1, DG1, PR1)
 - Shows all fields in each segment with expandable long fields
 - Supports copy-to-clipboard for segments and individual fields
