@@ -1,8 +1,8 @@
-# HL7 Document Viewer
+# In-Browser HL7 Viewer
 
 A web application for parsing HL7 messages and extracting embedded documents.
 
-**Version:** 1.0.16  
+**Version:** 1.0.18  
 **🌐 [View Live Site](https://flatmapit.github.io/hl7-view/)**
 
 ## Overview
@@ -48,6 +48,8 @@ This tool parses HL7 messages and extracts embedded documents from OBX segments.
 ## Technical Details
 
 The application is a single HTML file with embedded CSS and JavaScript. It runs entirely in the browser with no server required. **All data processing happens locally - your HL7 messages never leave your device.**
+
+**One-file HTML App. No external dependencies. No network calls.**
 
 ### HL7 Parsing
 - Automatically detects HL7 version from MSH-12 field (defaults to 2.5)
@@ -126,7 +128,7 @@ Releases are automatically created when version tags are pushed to the repositor
 
 This script will:
 - Read the version from the `VERSION` file
-- Create a git tag (e.g., `v1.0.16`)
+- Create a git tag (e.g., `v1.0.18`)
 - Push the tag to trigger the GitHub Actions workflow
 - The workflow will automatically create a release with downloadable assets
 
@@ -144,7 +146,7 @@ git push origin "v$VERSION"
 1. Go to the [Actions tab](https://github.com/your-org/hl7-view/actions/workflows/release.yml) in GitHub
 2. Select "Create Release" workflow
 3. Click "Run workflow"
-4. Enter the version number (e.g., `1.0.16`)
+4. Enter the version number (e.g., `1.0.18`)
 5. Click "Run workflow"
 
 ### Release Assets
