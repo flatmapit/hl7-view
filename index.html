@@ -1419,7 +1419,7 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
 
     <script>
         // Application version
-        const APP_VERSION = '1.0.18';
+        const APP_VERSION = '1.0.19';
 
         // Magic number patterns for base64 encoded files
         const MAGIC_NUMBERS = {
@@ -1609,6 +1609,166 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             }
         }
 
+        // Generalized function to extract type hints from all OBX fields
+        function extractTypeHintsFromOBXFields(fields, componentSep) {
+            const hints = {
+                text: '',
+                components: []
+            };
+            
+            // Scan all fields for type-related keywords
+            // OBX-2: Value Type (ED, RP, etc.)
+            // OBX-3: Observation Identifier (often contains document type hints)
+            // OBX-4: Observation Sub-ID (may contain hints)
+            // OBX-5: Observation Value (may contain type in components)
+            // OBX-6: Units (sometimes contains format hints)
+            // OBX-11: Observation Result Status
+            // OBX-17: Observation Method (may contain format info)
+            
+            for (let i = 0; i < fields.length; i++) {
+                const field = fields[i] || '';
+                if (field) {
+                    // Add field text to hints
+                    hints.text += ' ' + field.toLowerCase();
+                    
+                    // If field contains component separator, parse components
+                    if (field.includes(componentSep)) {
+                        const components = field.split(componentSep);
+                        components.forEach(comp => {
+                            if (comp) {
+                                hints.components.push(comp.toLowerCase());
+                                hints.text += ' ' + comp.toLowerCase();
+                            }
+                        });
+                    }
+                }
+            }
+            
+            return hints;
+        }
+
+        // Generalized function to detect and extract Base64 data from text
+        // Base64 pattern: A-Z, a-z, 0-9, +, /, = (padding), whitespace allowed
+        function detectBase64Range(text, componentSep) {
+            if (!text) return null;
+            
+            // Base64 character pattern - look for sequences that are primarily Base64 characters
+            // Base64 typically has a mix of alphanumeric and +/= characters
+            // We'll look for patterns that:
+            // 1. Are at least 20 characters (after whitespace removal)
+            // 2. Contain mostly Base64 characters (A-Z, a-z, 0-9, +, /, =)
+            // 3. Don't contain too many non-Base64 characters
+            const base64Pattern = /[A-Za-z0-9+\/=\s]{20,}/g;
+            const matches = [];
+            
+            // Find all potential Base64 sequences
+            let match;
+            const textCopy = text; // Create a copy to avoid regex state issues
+            while ((match = base64Pattern.exec(textCopy)) !== null) {
+                const candidate = match[0].replace(/[\s\r\n\t]/g, ''); // Remove all whitespace
+                
+                // Validate it's likely Base64 (not just random text)
+                // Base64 strings should have reasonable length and valid format
+                if (candidate.length >= 20 && isValidBase64(candidate)) {
+                    // Calculate Base64 character density (should be high for real Base64)
+                    const base64CharCount = (candidate.match(/[A-Za-z0-9+\/]/g) || []).length;
+                    const paddingCount = (candidate.match(/=/g) || []).length;
+                    const density = base64CharCount / candidate.length;
+                    
+                    // Base64 should have high density of valid characters (>= 95%)
+                    // and padding should only be at the end (0-2 = characters)
+                    if (density >= 0.95 && paddingCount <= 2) {
+                        // Check context around the match
+                        const beforeMatch = textCopy.substring(Math.max(0, match.index - 50), match.index);
+                        const afterMatch = textCopy.substring(match.index + match[0].length, Math.min(textCopy.length, match.index + match[0].length + 50));
+                        
+                        // If we see "base64", "encoding", or type hints before, this is likely encoded data
+                        const hasEncodingHint = /base64|encoding|encoded|^pdf\^|^jpeg\^|^png\^|^gif\^|^tiff\^|^application\//i.test(beforeMatch);
+                        
+                        // Check if it's not part of a field separator or component structure
+                        const isInFieldStructure = /[\|^&~]/.test(beforeMatch.slice(-1)) && /[\|^&~]/.test(afterMatch.charAt(0));
+                        
+                        // Prefer matches with encoding hints or that aren't in field structures
+                        const confidence = (hasEncodingHint ? 2 : 0) + (isInFieldStructure ? -1 : 0);
+                        
+                        matches.push({
+                            data: candidate,
+                            startIndex: match.index,
+                            endIndex: match.index + match[0].length,
+                            hasEncodingHint: hasEncodingHint,
+                            confidence: confidence,
+                            length: candidate.length,
+                            context: beforeMatch + '[' + match[0].substring(0, 20) + '...]' + afterMatch
+                        });
+                    }
+                }
+            }
+            
+            // Return the best match: prioritize by confidence, then by length
+            if (matches.length > 0) {
+                matches.sort((a, b) => {
+                    if (b.confidence !== a.confidence) {
+                        return b.confidence - a.confidence;
+                    }
+                    return b.length - a.length;
+                });
+                return matches[0];
+            }
+            
+            return null;
+        }
+
+        // Generalized function to detect document type from text hints
+        function detectTypeFromHints(hintsText) {
+            const hints = hintsText.toLowerCase();
+            
+            // Type detection patterns (ordered by specificity)
+            const typePatterns = [
+                { pattern: /\bpdf\b/, type: 'pdf' },
+                { pattern: /\bapplication\/pdf\b/, type: 'pdf' },
+                { pattern: /\bportable\s+document\b/, type: 'pdf' },
+                { pattern: /\bjpeg\b|\bjpg\b/, type: 'jpeg' },
+                { pattern: /\bimage\/jpeg\b/, type: 'jpeg' },
+                { pattern: /\bpng\b/, type: 'png' },
+                { pattern: /\bimage\/png\b/, type: 'png' },
+                { pattern: /\bgif\b/, type: 'gif' },
+                { pattern: /\bimage\/gif\b/, type: 'gif' },
+                { pattern: /\btiff\b|\btif\b/, type: 'tiff' },
+                { pattern: /\bimage\/tiff\b/, type: 'tiff' },
+                { pattern: /\brtf\b/, type: 'rtf' },
+                { pattern: /\bapplication\/rtf\b/, type: 'rtf' },
+                { pattern: /\bhtml\b|\bhtm\b/, type: 'html' },
+                { pattern: /\btext\/html\b/, type: 'html' },
+                { pattern: /\bzip\b/, type: 'zip' },
+                { pattern: /\bapplication\/zip\b/, type: 'zip' },
+                { pattern: /\bxml\b/, type: 'xml' },
+                { pattern: /\bapplication\/xml\b|\btext\/xml\b/, type: 'xml' },
+                { pattern: /\bsvg\b/, type: 'svg' },
+                { pattern: /\bimage\/svg\+xml\b/, type: 'svg' },
+                { pattern: /\bdicom\b|\bdcm\b/, type: 'dicom' },
+                { pattern: /\bapplication\/dicom\b/, type: 'dicom' },
+                { pattern: /\bmsword\b/, type: 'doc' },
+                { pattern: /\bapplication\/msword\b/, type: 'doc' },
+                { pattern: /\bdocx\b|\bwordprocessingml\b/, type: 'docx' },
+                { pattern: /\bapplication\/vnd\.openxmlformats-officedocument\.wordprocessingml\b/, type: 'docx' },
+                { pattern: /\bmp3\b|\bmpeg\b/, type: 'mp3' },
+                { pattern: /\baudio\/mpeg\b/, type: 'mp3' },
+                { pattern: /\bwav\b|\bwave\b/, type: 'wav' },
+                { pattern: /\baudio\/wav\b|\baudio\/wave\b/, type: 'wav' },
+                { pattern: /\bmp4\b|\bmpeg4\b/, type: 'mp4' },
+                { pattern: /\bvideo\/mp4\b/, type: 'mp4' },
+                { pattern: /\becg\b|\bhl7-scp-ecg\b/, type: 'hl7-scp-ecg' }
+            ];
+            
+            for (const { pattern, type } of typePatterns) {
+                if (pattern.test(hints)) {
+                    return type;
+                }
+            }
+            
+            return null;
+        }
+
         function extractDocument(segment, componentSep) {
             const fields = segment.fields;
 
@@ -1622,7 +1782,14 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
             const subId = fields[4] || '';
 
             // OBX-5 is Observation Value (contains the data)
-            const obsValue = fields[5] || '';
+            // Sometimes data might be in OBX-6 if OBX-5 is empty, so check both
+            let obsValue = fields[5] || '';
+            if (!obsValue && fields.length > 6) {
+                obsValue = fields[6] || '';
+            }
+            
+            // Extract type hints from all OBX fields
+            const allHints = extractTypeHintsFromOBXFields(fields, componentSep);
 
             // Parse the observation value components
             // Format: source^type^subtype^encoding^data
@@ -1688,6 +1855,63 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                         dataType = 'hl7-scp-ecg';
                     }
                 }
+                // Short format: type^encoding^data (3 components)
+                // Also handles: type^encoding^data^... (3+ components where remaining are data)
+                else if (components.length >= 3) {
+                    const typeHint = (components[0] || '').toLowerCase();
+                    const encodingHint = (components[1] || '').toLowerCase();
+                    encoding = encodingHint;
+                    
+                    // If we have more than 3 components, the base64 data might be split
+                    // Join all components from index 2 onwards to reconstruct the full data
+                    if (components.length > 3) {
+                        base64Data = components.slice(2).join(componentSep);
+                    } else {
+                        base64Data = components[2] || '';
+                    }
+                    
+                    // If encoding is "base64" (case-insensitive), ensure it's set correctly
+                    if (encodingHint === 'base64' || encodingHint === 'base64encoded') {
+                        encoding = 'base64';
+                    }
+
+                    // Determine type from first component
+                    if (typeHint.includes('pdf')) {
+                        dataType = 'pdf';
+                    } else if (typeHint.includes('jpeg') || typeHint.includes('jpg')) {
+                        dataType = 'jpeg';
+                    } else if (typeHint.includes('png')) {
+                        dataType = 'png';
+                    } else if (typeHint.includes('gif')) {
+                        dataType = 'gif';
+                    } else if (typeHint.includes('tiff') || typeHint.includes('tif')) {
+                        dataType = 'tiff';
+                    } else if (typeHint.includes('rtf')) {
+                        dataType = 'rtf';
+                    } else if (typeHint.includes('html') || typeHint.includes('htm')) {
+                        dataType = 'html';
+                    } else if (typeHint.includes('zip')) {
+                        dataType = 'zip';
+                    } else if (typeHint.includes('xml')) {
+                        dataType = 'xml';
+                    } else if (typeHint.includes('svg')) {
+                        dataType = 'svg';
+                    } else if (typeHint.includes('dicom') || typeHint.includes('dcm')) {
+                        dataType = 'dicom';
+                    } else if (typeHint.includes('msword') || (typeHint.includes('doc') && !typeHint.includes('docx'))) {
+                        dataType = 'doc';
+                    } else if (typeHint.includes('wordprocessingml') || typeHint.includes('docx')) {
+                        dataType = 'docx';
+                    } else if (typeHint.includes('mpeg') || typeHint.includes('mp3')) {
+                        dataType = 'mp3';
+                    } else if (typeHint.includes('wav') || typeHint.includes('wave')) {
+                        dataType = 'wav';
+                    } else if (typeHint.includes('mp4') || typeHint.includes('mpeg4')) {
+                        dataType = 'mp4';
+                    } else if (typeHint.includes('hl7-scp-ecg') || typeHint.includes('ecg')) {
+                        dataType = 'hl7-scp-ecg';
+                    }
+                }
             }
 
             // If we have data but no type, try to detect from base64 data
@@ -1697,11 +1921,31 @@ OBX|1|ED|PDF^Document||^application^pdf^Base64^JVBERi0xLjQKJ...||||||F"></textar
                 base64Data = obsValue.replace(/[\s^|]/g, '');
             }
 
+            // Generalized Base64 detection: scan the entire segment for Base64 patterns
+            if (!base64Data) {
+                const segmentText = segment.raw || '';
+                const base64Match = detectBase64Range(segmentText, componentSep);
+                if (base64Match) {
+                    base64Data = base64Match.data;
+                    // If we found Base64 with encoding hints, we're more confident
+                    if (base64Match.hasEncodingHint && !encoding) {
+                        encoding = 'base64';
+                    }
+                }
+            }
+
+            // Generalized type detection from all OBX fields
+            if (!dataType) {
+                // First try the generalized hint extraction from all fields
+                dataType = detectTypeFromHints(allHints.text);
+            }
+
+            // If still no type, try magic number detection from base64 data
             if (base64Data && !dataType) {
                 dataType = detectTypeFromMagic(base64Data);
             }
 
-            // Also check OBX-3 and OBX-4 for type hints
+            // Fallback: check OBX-3 and OBX-4 for type hints (legacy support)
             if (!dataType) {
                 const hints = (obsIdentifier + ' ' + subId).toLowerCase();
                 if (hints.includes('pdf')) dataType = 'pdf';

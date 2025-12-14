@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.19] - 2025-01-XX
+
+### Added
+- **Generalized Type Detection**: Enhanced document type detection by scanning all OBX fields (not just OBX-3 and OBX-4) for type hints
+- **Base64 Pattern Detection**: Automatic detection of Base64-encoded content anywhere in OBX segments using character pattern analysis
+- **Improved PDF Parsing**: Fixed parsing of PDF documents from OBX segments with format `pdf^Base64^<data>` (3-component format)
+- **Enhanced Document Extraction**: More robust document extraction that handles non-standard formats and finds Base64 data in unexpected locations
+
+### Fixed
+- Fixed parsing of OBX segments with 3-component format (`type^encoding^data`) where data might be split across multiple components
+- Improved Base64 data extraction to handle cases where OBX-5 is empty and data is in OBX-6
+- Enhanced encoding detection to properly handle case variations (e.g., "Base64" vs "base64")
+
+### Changed
+- Refactored document extraction logic to use generalized pattern matching and hint extraction
+- Improved Base64 validation with character density checks and padding validation
+- Enhanced type detection to support MIME types and descriptive terms in addition to simple keywords
+
 ## [1.0.18] - 2025-12-13
 
 ### Changed
